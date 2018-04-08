@@ -1,4 +1,4 @@
-;;; package --- summary:
+;;; package --- summary: My emacs configuration
 ;;; Commentary:
 ;;; Code:
 
