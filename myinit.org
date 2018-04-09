@@ -131,7 +131,7 @@
 
 #+end_src
 * Key frequent statistics
-#+begin_src emacs-lisp :tangle yes
+#+begin_src emacs-lisp
 (use-package keyfreq
   :ensure t
   :config
@@ -217,6 +217,39 @@
   (setq sml/theme 'powerline)
   (sml/setup))
 (load-theme 'tango-dark)
+#+end_src
+* Swiper / Ivy / Counsel
+Swiper gives us a really efficient incremental search with regular expressions
+and Ivy / Counsel replace a lot of ido or helms completion functionality
+#+begin_src emacs-lisp
+(use-package counsel
+  :ensure t
+  :bind
+  (("M-y" . counsel-yank-pop)
+   :map ivy-minibuffer-map
+   ("M-y" . ivy-next-line)))
+(use-package ivy
+  :ensure t
+  :diminish (ivy-mode)
+  :bind (("C-x b" . ivy-switch-buffer))
+  :config
+  (ivy-mode 1)
+  (setq ivy-use-virtual-buffers t)
+  (setq ivy-count-format "%d/%d ")
+  (setq ivy-display-style 'fancy))
+
+(use-package swiper
+  :ensure t
+  :bind (("C-s" . swiper)
+	 ("C-r" . swiper)
+	 ("C-c C-r" . ivy-resume)
+	 ("M-x" . counsel-M-x)
+	 ("C-x C-f" . counsel-find-file))
+  :config
+    (ivy-mode 1)
+    (setq ivy-use-virtual-buffers t)
+    (setq ivy-display-style 'fancy)
+    (define-key read-expression-map (kbd "C-r") 'counsel-expression-history))
 #+end_src
 * Company
 #+begin_src emacs-lisp
@@ -476,41 +509,6 @@
 
   #+RESULTS:
   : make-capture-frame
-
-* Swiper / Ivy / Counsel
-  Swiper gives us a really efficient incremental search with regular expressions
-  and Ivy / Counsel replace a lot of ido or helms completion functionality
-  #+begin_src emacs-lisp
-   (use-package counsel
-:ensure t
-  :bind
-  (("M-y" . counsel-yank-pop)
-   :map ivy-minibuffer-map
-   ("M-y" . ivy-next-line)))
-  (use-package ivy
-  :ensure t
-  :diminish (ivy-mode)
-  :bind (("C-x b" . ivy-switch-buffer))
-  :config
-  (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t)
-  (setq ivy-count-format "%d/%d ")
-  (setq ivy-display-style 'fancy))
-  (use-package swiper
-  :ensure t
-  :bind (("C-s" . swiper)
-	 ("C-r" . swiper)
-	 ("C-c C-r" . ivy-resume)
-	 ("M-x" . counsel-M-x)
-	 ("C-x C-f" . counsel-find-file))
-  :config
-  (progn
-    (ivy-mode 1)
-    (setq ivy-use-virtual-buffers t)
-    (setq ivy-display-style 'fancy)
-    (define-key read-expression-map (kbd "C-r") 'counsel-expression-history)
-    ))
-  #+end_src
 
 * Avy - navigate by searching for a letter on the screen and jumping to it
   See https://github.com/abo-abo/avy for more info
@@ -836,25 +834,26 @@
 
 * git
 #+begin_src emacs-lisp
-  (use-package magit
-    :ensure t
-    :init
-    (progn
-    (bind-key "C-x g" 'magit-status)
-    ))
+(use-package magit
+  :ensure t
+  :init
+  (progn
+  (bind-key "C-x g" 'magit-status)
+  ))
+;; ?? What is its purpose
+(setq magit-completing-read-function 'ivy-completing-read)
 
-    (use-package git-gutter
-    :ensure t
-    :init
-    (global-git-gutter-mode +1))
+(use-package git-gutter
+  :ensure t
+  :init
+  (global-git-gutter-mode +1))
 
-    (global-set-key (kbd "M-g M-g") 'hydra-git-gutter/body)
+(global-set-key (kbd "M-g M-g") 'hydra-git-gutter/body)
 
+(use-package git-timemachine
+  :ensure t)
 
-    (use-package git-timemachine
-    :ensure t
-    )
-  (defhydra hydra-git-gutter (:body-pre (git-gutter-mode 1)
+(defhydra hydra-git-gutter (:body-pre (git-gutter-mode 1)
                               :hint nil)
     "
   Git gutter:
