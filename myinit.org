@@ -63,6 +63,10 @@
 (set-cursor-color "yellow")
 (set-face-background hl-line-face "yellow4")
 ;;(set-face-background 'hl-line "#372E2D")
+
+;; highlights trailing spaces tabs and lines exceeding 80 columns
+(setq whitespace-style '(face trailing tabs lines-tail))
+(global-whitespace-mode t)
 #+end_src
 * Ansi-term
 #+begin_src emacs-lisp
@@ -1256,7 +1260,8 @@ Eshell prompt
 
      ("C-M-d" . delete-sexp)
 
-     ("M-<backspace>" . backward-kill-word)
+     ;; conflict with ansi-term C-<backspace>
+     ;; ("M-<backspace>" . backward-kill-word)
      ("C-<backspace>" . sp-backward-kill-word)
      ([remap sp-backward-kill-word] . backward-kill-word)
 
