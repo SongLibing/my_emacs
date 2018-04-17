@@ -1,322 +1,448 @@
 #+STARTUP: overview
 * Init Setting
- #+begin_src emacs-lisp
- ;;;;;;;;;
- ;; By default Emacs triggers garbage collection at ~0.8MB which makes
- ;; startup really slow. Since most systems have at least 64MB of memory,
- ;; we increase it during initialization.
- (setq gc-cons-threshold 64000000)
- ;; restore after startup
- ;;(add-hook 'after-init-hook #'(lambda ()
- ;;                               (setq gc-cons-threshold 800000)))
+#+BEGIN_SRC emacs-lisp
+  ;;;;;;;;;
+  ;; By default Emacs triggers garbage collection at ~0.8MB which makes
+  ;; startup really slow. Since most systems have at least 64MB of memory,
+  ;; we increase it during initialization.
+  (setq gc-cons-threshold 64000000)
+  ;; restore after startup
+  ;;(add-hook 'after-init-hook #'(lambda ()
+  ;;                               (setq gc-cons-threshold 800000)))
 
- ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
- ;; Start emacs server if not already running
- ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
- (if (and (fboundp 'server-running-p)
-         (not (server-running-p)))
-    (server-start))
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Start emacs server if not already running
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (if (and (fboundp 'server-running-p)
+           (not (server-running-p)))
+      (server-start))
 
-;; Prevent emacs from creating a bckup file filename
- (setq make-backup-files nil)
+  ;; Prevent emacs from creating a bckup file filename
+  (setq make-backup-files nil)
 
- ;; Remove trailing white space upon saving
- ;; Note: because of a bug in EIN we only delete trailing whitespace
- ;; when not in EIN mode.
- ;;(add-hook 'before-save-hook
- ;;          (lambda ()
- ;;            (when (derived-mode-p 'c++-mode))
- ;;              (delete-trailing-whitespace)))
+  ;; Remove trailing white space upon saving
+  ;; Note: because of a bug in EIN we only delete trailing whitespace
+  ;; when not in EIN mode.
+  ;;(add-hook 'before-save-hook
+  ;;          (lambda ()
+  ;;            (when (derived-mode-p 'c++-mode))
+  ;;              (delete-trailing-whitespace)))
 
- ;; Auto-wrap at 80 characters
- (setq-default auto-fill-function 'do-auto-fill)
- (setq-default fill-column 80)
- (turn-on-auto-fill)
- ;; Disable auto-fill-mode in programming mode
- (add-hook 'prog-mode-hook (lambda () (auto-fill-mode -1)))
+  ;; Auto-wrap at 80 characters
+  (setq-default auto-fill-function 'do-auto-fill)
+  (setq-default fill-column 80)
+  (turn-on-auto-fill)
+  ;; Disable auto-fill-mode in programming mode
+  (add-hook 'prog-mode-hook (lambda ()
+                              (auto-fill-mode -1)))
 
- ;; Change tab key behavior to insert spaces instead
- (setq-default indent-tabs-mode nil)
- ;; Set the number of spaces that the tab key inserts (usually 2 or 4)
- (setq c-basic-offset 2)
- ;; Set the size that a tab CHARACTER is interpreted as
- ;; (unnecessary if there are no tab characters in the file!)
- (setq tab-width 2)
-#+end_src
+  ;; Change tab key behavior to insert spaces instead
+  (setq-default indent-tabs-mode nil)
+  ;; Set the number of spaces that the tab key inserts (usually 2 or 4)
+  (setq c-basic-offset 2)
+  ;; Set the size that a tab CHARACTER is interpreted as
+  ;; (unnecessary if there are no tab characters in the file!)
+  (setq tab-width 2)
+#+END_SRC
 * Interface tweaks
-#+begin_src emacs-lisp
-(setq inhibit-startup-message t)
-(tool-bar-mode -1)
-(menu-bar-mode -1)
-(scroll-bar-mode -1)
-(blink-cursor-mode -1)
-;; use y instead of yes to answer
-(fset 'yes-or-no-p 'y-or-n-p)
-;; reload data from file to revert the buffer
-(global-set-key (kbd "<f5>") 'revert-buffer)
-(column-number-mode t)
-(setq ring-bell-function 'ignore)
-(setq require-final-newline t)
+#+BEGIN_SRC emacs-lisp
+  (setq inhibit-startup-message t)
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+  (scroll-bar-mode -1)
+  (blink-cursor-mode -1)
+  ;; use y instead of yes to answer
+  (fset 'yes-or-no-p 'y-or-n-p)
+  ;; reload data from file to revert the buffer
+  (global-set-key (kbd "<f5>") 'revert-buffer)
+  (column-number-mode t)
+  (setq ring-bell-function 'ignore)
+  (setq require-final-newline t)
 
-;; Highlights the current cursor line
-(global-hl-line-mode t)
-(set-cursor-color "yellow")
-(set-face-background hl-line-face "yellow4")
-;;(set-face-background 'hl-line "#372E2D")
+  ;; Highlights the current cursor line
+  (global-hl-line-mode t)
+  (set-cursor-color "yellow")
+  (set-face-background hl-line-face "yellow4")
+  ;;(set-face-background 'hl-line "#372E2D")
 
-;; highlights trailing spaces tabs and lines exceeding 80 columns
-(setq whitespace-style '(face trailing tabs lines-tail))
-(global-whitespace-mode t)
-#+end_src
+  ;; highlights trailing spaces tabs and lines exceeding 80 columns
+  (setq whitespace-style '(face trailing tabs lines-tail))
+  (global-whitespace-mode t)
+#+END_SRC
 * Ansi-term
-#+begin_src emacs-lisp
-(defadvice term-sentinel (around my-advice-term-sentinel (proc msg))
-  (if (memq (process-status proc) '(signal exit))
-      (let ((buffer (process-buffer proc)))
-        ad-do-it
-        (kill-buffer buffer))
-    ad-do-it))
-(ad-activate 'term-sentinel)
+#+BEGIN_SRC emacs-lisp
+  (defadvice term-sentinel (around my-advice-term-sentinel (proc msg))
+    (if (memq (process-status proc)
+              '(signal
+                exit))
+        (let ((buffer (process-buffer proc))) ad-do-it (kill-buffer buffer))
+      ad-do-it))
+  (ad-activate 'term-sentinel)
 
-(defvar my-term-shell "/bin/bash")
+  (defvar my-term-shell "/bin/bash")
 
-(defadvice ansi-term (before force-bash)
-  (interactive (list my-term-shell)))
-(ad-activate 'ansi-term)
+  (defadvice ansi-term (before force-bash)
+    (interactive (list my-term-shell)))
+  (ad-activate 'ansi-term)
 
-(defun my-term-paste (&optional string)
- (interactive)
- (process-send-string
-  (get-buffer-process (current-buffer))
-  (if string string (current-kill 0))))
+  (defun my-term-paste
+      (&optional
+       string)
+    (interactive)
+    (process-send-string (get-buffer-process (current-buffer))
+                         (if string string (current-kill 0))))
 
-(defun my-term-hook ()
-  (goto-address-mode)
-  (define-key term-raw-map "\C-y" 'my-term-paste))
+  (defun my-term-hook ()
+    (goto-address-mode)
+    (define-key term-raw-map "\C-y" 'my-term-paste))
 
-(add-hook 'term-mode-hook 'my-term-hook)
-(ansi-term my-term-shell)
-(ansi-term "/bin/bash")
-#+end_src
+  (add-hook 'term-mode-hook 'my-term-hook)
+  (ansi-term my-term-shell)
+  (ansi-term "/bin/bash")
+#+END_SRC
 * IBUFFER
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "C-x C-b") 'ibuffer)
   (setq ibuffer-saved-filter-groups
-	(quote (("default"
-		 ("dired" (mode . dired-mode))
-		 ("org" (name . "^.*org$"))
+        (quote (("default" ("dired" (mode . dired-mode))
+                 ("org" (name . "^.*org$"))
+                 ("web" (or (mode . web-mode)
+                            (mode . js2-mode)))
+                 ("shell" (or (mode . eshell-mode)
+                              (mode . shell-mode)))
+                 ("mu4e" (or (mode . mu4e-compose-mode)
+                             (name . "\*mu4e\*")))
+                 ("programming" (or (mode . python-mode)
+                                    (mode . c++-mode)))
+                 ("emacs" (or (name . "^\\*scratch\\*$")
+                              (name . "^\\*Messages\\*$")))))))
 
-		 ("web" (or (mode . web-mode) (mode . js2-mode)))
-		 ("shell" (or (mode . eshell-mode) (mode . shell-mode)))
-		 ("mu4e" (or
-
-                 (mode . mu4e-compose-mode)
-                 (name . "\*mu4e\*")
-                 ))
-		 ("programming" (or
-				 (mode . python-mode)
-				 (mode . c++-mode)))
-		 ("emacs" (or
-			   (name . "^\\*scratch\\*$")
-			   (name . "^\\*Messages\\*$")))
-		 ))))
-  (add-hook 'ibuffer-mode-hook
-	    (lambda ()
-	      (ibuffer-auto-mode 1)
-	      (ibuffer-switch-to-saved-filter-groups "default")))
+  (add-hook 'ibuffer-mode-hook (lambda ()
+                                 (ibuffer-auto-mode 1)
+                                 (ibuffer-switch-to-saved-filter-groups "default")))
 
   ;; don't show these
-					  ;(add-to-list 'ibuffer-never-show-predicates "zowie")
+  ;;(add-to-list 'ibuffer-never-show-predicates "zowie")
   ;; Don't show filter groups if there are no buffers in that group
   (setq ibuffer-show-empty-filter-groups nil)
 
   ;; Don't ask for confirmation to delete marked buffers
   (setq ibuffer-expert t)
-
-#+end_src
+#+END_SRC
 * Key frequent statistics
-#+begin_src emacs-lisp
-(use-package keyfreq
-  :ensure t
-  :config
-  (keyfreq-mode t)
-  (keyfreq-autosave-mode))
-#+end_src
+#+BEGIN_SRC emacs-lisp
+  (use-package keyfreq
+    :ensure t
+    :config
+    (keyfreq-mode t)
+    (keyfreq-autosave-mode))
+#+END_SRC
 * Repos
-#+begin_src emacs-lisp
-(require 'package)
-;; Disable package initialize after us.  We either initialize it
-;; anyway in case of interpreted .emacs, or we don't want slow
-;; initizlization in case of byte-compiled .emacs.elc.
-(setq package-enable-at-startup nil)
-;; Ask package.el to not add (package-initialize) to .emacs.
-(setq package--init-file-ensured t)
-(setq package-archives '(("gnu"   . "http://elpa.emacs-china.org/gnu/")
-                         ("melpa" . "http://elpa.emacs-china.org/melpa/")
-                         ("org" . "http://elpa.emacs-china.org/org/")))
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+  ;; Disable package initialize after us.  We either initialize it
+  ;; anyway in case of interpreted .emacs, or we don't want slow
+  ;; initizlization in case of byte-compiled .emacs.elc.
+  (setq package-enable-at-startup nil)
+  ;; Ask package.el to not add (package-initialize) to .emacs.
+  (setq package--init-file-ensured t)
+  (setq package-archives '(("gnu"   . "http://elpa.emacs-china.org/gnu/")
+                           ("melpa" . "http://elpa.emacs-china.org/melpa/")
+                           ("org" . "http://elpa.emacs-china.org/org/")))
 
-;; Bootstrap 'use-package'
-(unless (package-installed-p 'use-package)
-	(package-refresh-contents)
-	(package-install 'use-package))
-#+end_src
+  ;; Bootstrap 'use-package'
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+#+END_SRC
+
+* Elisp
+Using elisp-format to format elisp code in a buffer
+#+BEGIN_SRC emacs-lisp
+  (use-package elisp-format
+    :ensure t)
+
+  (defun my-format-elisp ()
+    (interactive)
+    (elisp-format-buffer)
+    (delete-trailing-whitespace))
+
+  (global-set-key (kbd "M-l") 'my-format-elisp)
+#+END_SRC
+* Org mode
+Org bullets makes things look pretty
+#+BEGIN_SRC emacs-lisp
+  (setq org-todo-keywords '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
+  (setenv "BROWSER" "firefox")
+
+  ;; use bullet sign '*' instead of '*'
+  ;;(use-package
+  ;;  org-bullets
+  ;;  :ensure t
+  ;;  :config (add-hook 'org-mode-hook (lambda ()
+  ;;                                     (org-bullets-mode 1))))
+
+  (custom-set-variables '(org-directory "~/Dropbox/orgfiles")
+                        '(org-default-notes-file (concat org-directory "/notes.org"))
+                        '(org-export-html-postamble nil)
+                        '(org-hide-leading-stars t)
+                        '(org-startup-folded (quote overview))
+                        '(org-startup-indented t))
+
+  (setq org-file-apps (append '(("\\.pdf\\'" . "evince %s")) org-file-apps ))
+  (global-set-key "\C-ca" 'org-agenda)
+  (setq org-agenda-custom-commands '(("c" "Simple agenda view" ((agenda "")
+                                                                (alltodo "")))))
+  (global-set-key (kbd "C-c c") 'org-capture)
+
+  (setq org-agenda-files (list "~/Dropbox/orgfiles/gcal.org" "~/Dropbox/orgfiles/i.org"
+                               "~/Dropbox/orgfiles/schedule.org"))
+  (setq org-capture-templates '(("a" "Appointment" entry (file  "~/Dropbox/orgfiles/gcal.org" )
+                                 "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
+                                ("l" "Link" entry (file+headline "~/Dropbox/orgfiles/links.org"
+                                                                 "Links") "* %? %^L %^g \n%T"
+                                                                 :prepend t)
+                                ("b" "Blog idea" entry (file+headline "~/Dropbox/orgfiles/i.org"
+                                                                      "Blog Topics:") "* %?\n%T"
+                                                                      :prepend t)
+                                ("t" "To Do Item" entry (file+headline "~/Dropbox/orgfiles/i.org"
+                                                                       "To Do") "* TODO %?\n%u"
+                                                                       :prepend t)
+                                ("m" "Mail To Do" entry (file+headline "~/Dropbox/orgfiles/i.org"
+                                                                       "To Do") "* TODO %a\n %?"
+                                                                       :prepend t)
+                                ("g" "GMail To Do" entry (file+headline "~/Dropbox/orgfiles/i.org"
+                                                                        "To Do") "* TODO %^L\n %?"
+                                                                        :prepend t)
+                                ("n" "Note" entry (file+headline "~/Dropbox/orgfiles/i.org"
+                                                                 "Note space") "* %?\n%u"
+                                                                 :prepend t)))
+  ;;(setq org-capture-templates '(("a" "Appointment" entry (file  "~/Dropbox/orgfiles/gcal.org" )
+  ;;                               "* TODO %?\n:PROPERTIES:\nDEADLINE: %^T \n\n:END:\n %i\n")
+  ;;                              ("l" "Link" entry (file+headline "~/Dropbox/orgfiles/links.org"
+  ;;                                                               "Links") "* %? %^L %^g \n%T"
+  ;;                                                               :prepend t)
+  ;;                              ("b" "Blog idea" entry (file+headline "~/Dropbox/orgfiles/i.org"
+  ;;                                                                    "Blog Topics:") "* %?\n%T"
+  ;;                                                                    :prepend t)
+  ;;                              ("t" "To Do Item" entry (file+headline "~/Dropbox/orgfiles/i.org"
+  ;;                                                                     "To Do") "* TODO %?\n%u"
+  ;;                                                                     :prepend t)
+  ;;                              ("n" "Note" entry (file+headline "~/Dropbox/orgfiles/i.org"
+  ;;                                                               "Note space") "* %?\n%u"
+  ;;                                                               :prepend t)
+  ;;                              ("j" "Journal" entry (file+datetree "~/Dropbox/journal.org")
+  ;;                               "* %?\nEntered on %U\n  %i\n  %a")
+  ;;                              ("s" "Screencast" entry (file
+  ;;                                                       "~/Dropbox/orgfiles/screencastnotes.org")
+  ;;                               "* %?\n%i\n")))
+
+  (defadvice org-capture-finalize (after delete-capture-frame activate)
+    "Advise capture-finalize to close the frame."
+    (if (equal "capture" (frame-parameter nil 'name))
+        (delete-frame)))
+  (defadvice org-capture-destroy (after delete-capture-frame activate)
+    "Advise capture-destroy to close the frame."
+    (if (equal "capture" (frame-parameter nil 'name))
+        (delete-frame)))
+  (use-package
+    noflet
+    :ensure t)
+  (defun make-capture-frame ()
+    "Create a new frame and run 'org-capture'."
+    (interactive)
+    (make-frame '((name . "capture")))
+    (select-frame-by-name "capture")
+    (delete-other-windows)
+    (noflet ((switch-to-buffer-other-window (buf)
+                                            (switch-to-buffer buf)))
+      (org-capture)))
+
+  (require 'ox-beamer)
+
+  ;; for inserting inactive dates
+  (define-key org-mode-map (kbd "C-c >")
+    (lambda ()
+      (interactive (org-time-stamp-inactive))))
+  #+END_SRC
+
+  #+RESULTS:
+  : make-capture-frame
 
 * Dired
-#+begin_src emacs-lisp
-; wiki melpa problem
-;;(use-package dired+
-;;  :ensure t
-;;  :config (require 'dired+)
-;;  )
-#+end_src
-
-#+RESULTS:
-: t
+#+BEGIN_SRC emacs-lisp
+  ; wiki melpa problem
+  ;;(use-package dired+
+  ;;  :ensure t
+  ;;  :config (require 'dired+)
+  ;;  )
+#+END_SRC
 
 * Undo Tree
-  #+begin_src emacs-lisp
-    (use-package undo-tree
-      :ensure t
-      :init
-      (global-undo-tree-mode))
-  #+end_src
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-tree
+    :ensure t
+    :init (global-undo-tree-mode))
+#+END_SRC
 
 * Which key
   Brings up some help
-  #+begin_src emacs-lisp
-  (use-package which-key
-	:ensure t
-	:config
-	(which-key-mode))
-  #+end_src
+  #+BEGIN_SRC emacs-lisp
+    (use-package which-key
+      :ensure t
+      :config (which-key-mode))
+  #+END_SRC
 * Try
-#+begin_src emacs-lisp
-(use-package try
-	:ensure t)
-#+end_src
+#+BEGIN_SRC emacs-lisp
+  (use-package try
+    :ensure t)
+#+END_SRC
 
 * Ace windows for easy window switching
-  #+begin_src emacs-lisp
-  (use-package ace-window
-  :ensure t
-  :init
-  (progn
-  (setq aw-scope 'frame)
-  (global-set-key (kbd "C-x O") 'other-frame)
-    (global-set-key [remap other-window] 'ace-window)
-    (custom-set-faces
-     '(aw-leading-char-face
-       ((t (:inherit ace-jump-face-foreground :height 3.0)))))
-    ))
-  #+end_src
+  #+BEGIN_SRC emacs-lisp
+    (use-package
+      ace-window
+      :ensure t
+      :init
+      (progn
+        (setq aw-scope 'frame)
+        (global-set-key (kbd "C-x O") 'other-frame)
+        (global-set-key [remap other-window] 'ace-window)
+        (custom-set-faces '(aw-leading-char-face ((t
+                                                   (:inherit ace-jump-face-foreground
+                                                             :height 3.0)))))))
+  #+END_SRC
 
   #+RESULTS:
 
 * Themes and modeline
-#+begin_src emacs-lisp
-(use-package smart-mode-line-powerline-theme
- :ensure t
- :config
-  (setq sml/no-confirm-load-theme t)
-  (setq sml/theme 'powerline)
-  (sml/setup))
-(load-theme 'tango-dark)
-#+end_src
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    smart-mode-line-powerline-theme
+    :ensure t
+    :config (setq sml/no-confirm-load-theme t)
+    (setq sml/theme 'powerline)
+    (sml/setup))
+  (load-theme 'tango-dark)
+#+END_SRC
 * Swiper / Ivy / Counsel
 Swiper gives us a really efficient incremental search with regular expressions
 and Ivy / Counsel replace a lot of ido or helms completion functionality
-#+begin_src emacs-lisp
-(use-package counsel
-  :ensure t
-  :bind
-  (("M-y" . counsel-yank-pop)
-   :map ivy-minibuffer-map
-   ("M-y" . ivy-next-line)))
-(use-package ivy
-  :ensure t
-  :diminish (ivy-mode)
-  :bind (("C-x b" . ivy-switch-buffer))
-  :config
-  (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t)
-  (setq ivy-count-format "%d/%d ")
-  (setq ivy-display-style 'fancy))
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    counsel
+    :ensure t
+    :bind (("
+M-y" . counsel-yank-pop) :map ivy-minibuffer-map ("M-y" . ivy-next-line)))
+  (use-package
+    ivy
+    :ensure t
+    :diminish (ivy-mode)
+    :bind (("C-x b" . ivy-switch-buffer))
+    :config (ivy-mode 1)
+    (setq ivy-use-virtual-buffers t)
+    (setq ivy-count-format "%d/%d ")
+    (setq ivy-display-style 'fancy))
 
-(use-package swiper
-  :ensure t
-  :bind (("C-s" . swiper)
-	 ("C-r" . swiper)
-	 ("C-c C-r" . ivy-resume)
-	 ("M-x" . counsel-M-x)
-	 ("C-x C-f" . counsel-find-file))
-  :config
-    (ivy-mode 1)
+  (use-package
+    swiper
+    :ensure t
+    :bind (("C-s" . swiper)
+           ("C-r" . swiper)
+           ("C-c C-r" . ivy-resume)
+           ("M-x" . counsel-M-x)
+           ("C-x C-f" . counsel-find-file))
+    :config (ivy-mode 1)
     (setq ivy-use-virtual-buffers t)
     (setq ivy-display-style 'fancy)
     (define-key read-expression-map (kbd "C-r") 'counsel-expression-history))
-#+end_src
-* Company
-#+begin_src emacs-lisp
-(use-package company
-:ensure t
-:config
-(setq company-idle-delay 0)
-(setq company-minimum-prefix-length 3)
+#+END_SRC
 
-(global-company-mode t)
-)
-
-(use-package company-irony
-:ensure t
-:config
-(add-to-list 'company-backends 'company-irony)
-
-)
-
-(use-package irony
-:ensure t
-:config
-(add-hook 'c++-mode-hook 'irony-mode)
-(add-hook 'c-mode-hook 'irony-mode)
-(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-)
-
-(use-package irony-eldoc
-:ensure t
-:config
-(add-hook 'irony-mode-hook #'irony-eldoc))
-
-(defun my/python-mode-hook ()
-  (add-to-list 'company-backends 'company-jedi))
-
-(add-hook 'python-mode-hook 'my/python-mode-hook)
-(use-package company-jedi
-    :ensure t
-    :config
-    (add-hook 'python-mode-hook 'jedi:setup)
-       )
-
-(defun my/python-mode-hook ()
-  (add-to-list 'company-backends 'company-jedi))
-
-(add-hook 'python-mode-hook 'my/python-mode-hook)
-
-
-
-#+end_src
-
-* Flycheck
-#+begin_src emacs-lisp
-    (use-package flycheck
+* Auqqto Completion
+There are two similar auto completion packages. Only one should be used.
+** auto-complete
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-auto-complete ()
+    "Load 'auto-complete' and enable it globally."
+    (use-package
+      auto-complete
       :ensure t
-      :config
-      (progn
-        (setq flycheck-clang-language-standard "c++11")
-        (global-flycheck-mode t)))
+      :init (progn (ac-config-default)
+                   (global-auto-complete-mode t)))
+    (use-package
+      pos-tip
+      :ensure t)
 
-  #+end_src
+    (use-package
+      ac-clang
+      :ensure t
+      :after pos-tip
+      :init (add-hook 'c-mode-common-hook '(lambda ()
+                                              (setq ac-clang-cflags CFLAGS)
+                                              (ac-clang-active-after-modify)))))
+#+END_SRC
+** company
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-company ()
+    "Load company and irony and enable them globally."
+    (use-package
+      company
+      :ensure t
+      :config (setq company-idle-delay 0)
+      (setq company-minimum-prefix-length 3)
+      (setq company-show-numbers t)
+      (global-company-mode t))
+
+    (defun my/python-mode-hook ()
+      (add-to-list 'company-backends 'company-jedi))
+
+    (add-hook 'python-mode-hook 'my/python-mode-hook)
+    (use-package
+      company-jedi
+      :ensure t
+      :config (add-hook 'python-mode-hook 'jedi:setup))
+
+    (defun my/python-mode-hook ()
+      (add-to-list 'company-backends 'company-jedi))
+
+    (add-hook 'python-mode-hook 'my/python-mode-hook))
+#+END_SRC
+
+** Setting up auto complition type
+complition-type is defined here for setting up different completion
+#+BEGIN_SRC emacs-lisp
+  ;; Define my-comletion-method C++ and other language code will use it
+  ;; We also can check the type in emacs
+  (defvar my-completion-method "company"
+    "The completion method used.  It is either 'company' or 'auto-complete'.")
+
+  (defun my-completion-method-company()
+    (equal my-completion-method "company"))
+
+  (defun my-completion-method-autocomplete()
+    (equal my-completion-method "auto-complete"))
+
+  (defun my-wrong-completion-method()
+    (print "Wrong value of my-init-auto-complete."
+           "The value must be 'company' or 'auto-comletion."))
+
+  (cond ((my-completion-method-company)
+         (my-init-company))
+        ((my-completion-method-autocomplete)
+         (my-init-auto-complete))
+        (t (my-wrong-completion-method)))
+#+END_SRC
+* Flycheck
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    flycheck
+    :ensure t
+    :config (progn
+              (setq flycheck-clang-language-standard "c++11")
+              (global-flycheck-mode t)))
+  #+END_SRC
 * Ycmd
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 ;;(use-package ycmd
 ;;  :ensure t
 ;;  :init
@@ -353,188 +479,116 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 ;;      )
 ;;    )
 ;;  )
-#+end_src
+#+END_SRC
 * C++
-#+begin_src emacs-lisp
-(add-to-list 'auto-mode-alist '("\\.ic\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.yy\\'" . c++-mode))
-(use-package modern-cpp-font-lock
-  :ensure t
-  :config
-  (modern-c++-font-lock-global-mode t))
+** Basic C/C++ mode initialize
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'auto-mode-alist '("\\.ic\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.yy\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+  (use-package
+    modern-cpp-font-lock
+    :ensure t
+    :config (modern-c++-font-lock-global-mode t))
 
-(use-package clang-format
-:ensure t
-;;:bind (("C-M q" . clang-format-region))
-)
+  (use-package
+    clang-format
+    :ensure t
+    :bind ("C-M-q" . clang-format-region))
 
-(use-package xcscope
-  :ensure t
-  :config
-  (setq cscope-program "gtags-cscope")
-  ;;(setq cscope-program "cscope")
-  (add-to-list 'cscope-indexer-suffixes "*.ic")
-  (add-to-list 'cscope-indexer-suffixes "*.yy")
-  (add-to-list 'cscope-indexer-suffixes "*.x")
-  (cscope-setup)
-  )
+  (use-package
+    google-c-style
+    :ensure t
+    :config (add-hook 'c-mode-common-hook 'google-set-c-style)
+    (add-hook 'c-mode-common-hook 'google-make-newline-indent))
+#+END_SRC
+** Code navigation
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    xcscope
+    :ensure t
+    :config (setq cscope-program "gtags-cscope")
+    ;;(setq cscope-program "cscope")
+    (add-to-list 'cscope-indexer-suffixes "*.ic")
+    (add-to-list 'cscope-indexer-suffixes "*.yy")
+    (add-to-list 'cscope-indexer-suffixes "*.x")
+    (cscope-setup))
 
-(use-package ggtags
-  :ensure t
-  :config
-  (add-hook 'c-mode-common-hook
-            (lambda ()
-              (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
-                (ggtags-mode 1))))
-  )
+  (use-package
+    ggtags
+    :ensure t
+    :config (add-hook 'c-mode-common-hook (lambda ()
+                                            (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
+                                              (ggtags-mode 1)))))
+#+END_SRC
+** Initialize cmake mode
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    cmake-mode
+    :ensure t)
+#+END_SRC
+** Auto completition
+*** Irony
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-irony()
+    "Initialize irony for auto completion and flycheck."
+    (use-package
+      irony
+      :ensure t
+      :requires (company)
+      :config (add-hook 'c++-mode-hook 'irony-mode)
+      (add-hook 'c-mode-hook 'irony-mode)
+      (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options))
+    (use-package
+      company-irony
+      :ensure t
+      :requires (irony)
+      :config (add-to-list 'company-backends 'company-irony))
+    (use-package
+      flycheck-irony
+      :ensure t
+      :requires (flycheck irony)
+      :config (add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+    (use-package
+      irony-eldoc
+      :ensure t
+      :requires (irony)
+      :config (add-hook 'irony-mode-hook #'irony-eldoc)))
+#+END_SRC
+*** Setup Auto completion
+#+BEGIN_SRC emacs-lisp
+  (defvar my-c-company-backend "irony")
 
-(use-package google-c-style
-  :ensure t
-  :config
-  (add-hook 'c-mode-common-hook 'google-set-c-style)
-  (add-hook 'c-mode-common-hook 'google-make-newline-indent)
-)
+  (defun my-init-c-company ()
+    "Initialize company backend of c/c++ mode."
+    (cond ((equal my-c-company-backend "irony")
+           (my-init-irony))
+          (t (message "Wrong company backend name: %s." my-c-company-backend))))
 
-(use-package cmake-mode
-  :ensure t)
-#+end_src
-
-#+RESULTS:
+  (cond ((my-completion-method-company)
+         (my-init-c-company))
+         ((my-completion-method-autocomplete)
+          ())
+         (t (my-wrong-completion-method)))
+#+END_SRC
 * Other language modes
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package json-mode
   :ensure t)
 (use-package markdown-mode
   :ensure t)
-#+end_src
-* Org mode
-  Org bullets makes things look pretty
-  #+begin_src emacs-lisp
-(setq org-todo-keywords
-  '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
-
-    (setenv "BROWSER" "google-chrome-stable")
-
-        (use-package org-bullets
-        :ensure t
-        :config
-        (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
-
-            (custom-set-variables
-             '(org-directory "~/Dropbox/orgfiles")
-             '(org-default-notes-file (concat org-directory "/notes.org"))
-             '(org-export-html-postamble nil)
-             '(org-hide-leading-stars t)
-             '(org-startup-folded (quote overview))
-             '(org-startup-indented t)
-             )
-
-            (setq org-file-apps
-  		(append '(
-          		  ("\\.pdf\\'" . "evince %s")
-          		  ) org-file-apps ))
-
-            (global-set-key "\C-ca" 'org-agenda)
-
-            (setq org-agenda-custom-commands
-            '(("c" "Simple agenda view"
-            ((agenda "")
-            (alltodo "")))))
-
-            (global-set-key (kbd "C-c c") 'org-capture)
-
-            (setq org-agenda-files (list "~/Dropbox/orgfiles/gcal.org"
-          			       "~/Dropbox/orgfiles/i.org"
-          			       "~/Dropbox/orgfiles/schedule.org"))
-            (setq org-capture-templates
-          			  '(("a" "Appointment" entry (file  "~/Dropbox/orgfiles/gcal.org" )
-          				   "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
-          				  ("l" "Link" entry (file+headline "~/Dropbox/orgfiles/links.org" "Links")
-          				   "* %? %^L %^g \n%T" :prepend t)
-          				  ("b" "Blog idea" entry (file+headline "~/Dropbox/orgfiles/i.org" "Blog Topics:")
-          				   "* %?\n%T" :prepend t)
-          				  ("t" "To Do Item" entry (file+headline "~/Dropbox/orgfiles/i.org" "To Do")
-          				   "* TODO %?\n%u" :prepend t)
-  					  ("m" "Mail To Do" entry (file+headline "~/Dropbox/orgfiles/i.org" "To Do")
-  					   "* TODO %a\n %?" :prepend t)
-  					  ("g" "GMail To Do" entry (file+headline "~/Dropbox/orgfiles/i.org" "To Do")
-  					   "* TODO %^L\n %?" :prepend t)
-  					  ("n" "Note" entry (file+headline "~/Dropbox/orgfiles/i.org" "Note space")
-          				   "* %?\n%u" :prepend t)
-  					  ))
-            ;; (setq org-capture-templates
-        ;; 		    '(("a" "Appointment" entry (file  "~/Dropbox/orgfiles/gcal.org" )
-        ;; 			     "* TODO %?\n:PROPERTIES:\nDEADLINE: %^T \n\n:END:\n %i\n")
-        ;; 			    ("l" "Link" entry (file+headline "~/Dropbox/orgfiles/links.org" "Links")
-        ;; 			     "* %? %^L %^g \n%T" :prepend t)
-        ;; 			    ("b" "Blog idea" entry (file+headline "~/Dropbox/orgfiles/i.org" "Blog Topics:")
-        ;; 			     "* %?\n%T" :prepend t)
-        ;; 			    ("t" "To Do Item" entry (file+headline "~/Dropbox/orgfiles/i.org" "To Do")
-        ;; 			     "* TODO %?\n%u" :prepend t)
-        ;; 			    ("n" "Note" entry (file+headline "~/Dropbox/orgfiles/i.org" "Note space")
-        ;; 			     "* %?\n%u" :prepend t)
-
-        ;; 			    ("j" "Journal" entry (file+datetree "~/Dropbox/journal.org")
-        ;; 			     "* %?\nEntered on %U\n  %i\n  %a")
-            ;;                                ("s" "Screencast" entry (file "~/Dropbox/orgfiles/screencastnotes.org")
-            ;;                                "* %?\n%i\n")))
-
-
-        (defadvice org-capture-finalize
-            (after delete-capture-frame activate)
-        "Advise capture-finalize to close the frame"
-        (if (equal "capture" (frame-parameter nil 'name))
-        (delete-frame)))
-
-        (defadvice org-capture-destroy
-            (after delete-capture-frame activate)
-        "Advise capture-destroy to close the frame"
-        (if (equal "capture" (frame-parameter nil 'name))
-        (delete-frame)))
-
-        (use-package noflet
-        :ensure t )
-        (defun make-capture-frame ()
-        "Create a new frame and run org-capture."
-        (interactive)
-        (make-frame '((name . "capture")))
-        (select-frame-by-name "capture")
-        (delete-other-windows)
-        (noflet ((switch-to-buffer-other-window (buf) (switch-to-buffer buf)))
-            (org-capture)))
-
-(require 'ox-beamer)
-
-; for inserting inactive dates
-(define-key org-mode-map (kbd "C-c >") (lambda () (interactive (org-time-stamp-inactive))))
-
-
-  #+end_src
-
-  #+RESULTS:
-  : make-capture-frame
+#+END_SRC
 
 * Avy - navigate by searching for a letter on the screen and jumping to it
   See https://github.com/abo-abo/avy for more info
-  #+begin_src emacs-lisp
+  #+BEGIN_SRC emacs-lisp
   (use-package avy
   :ensure t
   :bind ("M-s" . avy-goto-word-1)) ;; changed from char as per jcs
-  #+end_src
-
-* Autocomplete
-  #+begin_src emacs-lisp  :tangle no
-     (use-package auto-complete
-     :ensure t
-     :init
-     (progn
-     (ac-config-default)
-       (global-auto-complete-mode t)
-      ))
-  #+end_src
+  #+END_SRC
 
 * Yasnippet
-  #+begin_src emacs-lisp
+  #+BEGIN_SRC emacs-lisp
     (use-package yasnippet
       :ensure t
       :init
@@ -542,11 +596,11 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 
     (use-package yasnippet-snippets
       :ensure t)
-  #+end_src
+  #+END_SRC
 
   #+RESULTS:
 * Misc packages
-  #+begin_src emacs-lisp
+  #+BEGIN_SRC emacs-lisp
 
   ; flashes the cursor's line when you scroll
   (use-package beacon
@@ -582,10 +636,10 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 
 
 
-  #+end_src
+  #+END_SRC
 
 * Reveal.js
-  #+begin_src emacs-lisp :tangle no
+  #+BEGIN_SRC emacs-lisp :tangle no
     (use-package ox-reveal
     :ensure ox-reveal)
 
@@ -594,12 +648,12 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 
     (use-package htmlize
     :ensure t)
-  #+end_src
+  #+END_SRC
 
   #+RESULTS:
   : t
 * Python
-  #+begin_src emacs-lisp
+  #+BEGIN_SRC emacs-lisp
 
         (setq py-python-command "python3")
         (setq python-shell-interpreter "python3")
@@ -616,14 +670,13 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
           (venv-initialize-interactive-shells)
           (venv-initialize-eshell))
 
-  #+end_src
+  #+END_SRC
 
   #+RESULTS:
   : t
 
 * iedit and narrow / widen dwim
-
-  #+begin_src emacs-lisp
+  #+BEGIN_SRC emacs-lisp
   ; mark and edit all copies of the marked region simultaniously.
   (use-package iedit
   :ensure t)
@@ -658,14 +711,14 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   ;; how much I like this command. Only copy it if that's what you want.
   (define-key ctl-x-map "n" #'narrow-or-widen-dwim)
 
-  #+end_src
+  #+END_SRC
 
 
   #+RESULTS:
   : narrow-or-widen-dwim
 
 * Web Mode
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
     (use-package web-mode
       :ensure t
       :config
@@ -681,12 +734,12 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   (setq web-mode-enable-auto-quoting t) ; this fixes the quote problem I mentioned
 
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 : t
 * Emmet mode
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package emmet-mode
 :ensure t
 :config
@@ -694,9 +747,9 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 (add-hook 'web-mode-hook 'emmet-mode) ;; Auto-start on any markup modes
 (add-hook 'css-mode-hook  'emmet-mode) ;; enable Emmet's css abbreviation.
 )
-#+end_src
+#+END_SRC
 * Javascript
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package js2-mode
 :ensure t
 :ensure ac-js2
@@ -759,9 +812,9 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   (setq web-mode-css-indent-offset 2)
   (setq web-mode-code-indent-offset 2))
 (add-hook 'web-mode-hook  'my-web-mode-hook)
-#+end_src
+#+END_SRC
 * Hydra
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
   (use-package hydra
     :ensure hydra
     :init
@@ -832,12 +885,12 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   ("<down-mouse-1>" ignore)
   ("<drag-mouse-1>" ignore))
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 
 * git
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package magit
   :ensure t
   :init
@@ -887,9 +940,9 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 
 
 
-#+end_src
+#+END_SRC
 * Load other files
-   #+begin_src emacs-lisp
+   #+BEGIN_SRC emacs-lisp
      (defun load-if-exists (f)
        "load the elisp file only if it exists and is readable"
        (if (file-readable-p f)
@@ -898,31 +951,31 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
      (load-if-exists "~/Dropbox/shared/mu4econfig.el")
      (load-if-exists "~/Dropbox/shared/not-for-github.el")
 
-   #+end_src
+   #+END_SRC
 
    #+RESULTS:
    : t
 * Testing Stuff
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (add-hook 'org-mode-hook 'turn-on-flyspell)
 (add-hook 'org-mode-hook 'turn-on-auto-fill)
 (add-hook 'mu4e-compose-mode-hook 'turn-on-flyspell)
 (add-hook 'mu4e-compose-mode-hook 'turn-on-auto-fill)
 
-#+end_src
+#+END_SRC
 * Better Shell
-#+begin_src emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle no
   (use-package better-shell
       :ensure t
       :bind (("C-\"" . better-shell-shell)
              ("C-:" . better-shell-remote-open)))
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 : better-shell-remote-open
 
 * eshell stuff
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 
   (use-package shell-switcher
     :ensure t
@@ -987,10 +1040,10 @@ directory to make multiple eshell windows easier."
 
 (global-set-key (kbd "C-!") 'eshell-here)
 
-#+end_src
+#+END_SRC
 
 Eshell prompt
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
  (defcustom dotemacs-eshell/prompt-git-info
   t
   "Turns on additional git information in the prompt."
@@ -1031,11 +1084,11 @@ Eshell prompt
                     (propertize venv-current-name 'face `(:foreground "#2E8B57" :slant italic))
                     (epe-colorize-with-face "]" 'epe-venv-face)))
                 (propertize " $ " 'face 'font-lock-constant-face))))
-#+end_src
+#+END_SRC
 #+RESULTS:
 : t
 * Elfeed
-#+begin_src emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle no
 
     (setq elfeed-db-directory "~/Dropbox/shared/elfeeddb")
 
@@ -1151,13 +1204,13 @@ Eshell prompt
       (mz/hydra-elfeed/body))
 
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 : mz/make-and-run-elfeed-hydra
 
 * Dumb jump
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 
 (use-package dumb-jump
   :bind (("M-g o" . dumb-jump-go-other-window)
@@ -1173,17 +1226,17 @@ Eshell prompt
 
 
 
-#+end_src
+#+END_SRC
 * Origami folding
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package origami
 :ensure t)
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 
 * Stuff to refile as I do more Screencasts
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 
     ;;--------------------------------------------------------------------------
     ;; latex
@@ -1300,22 +1353,22 @@ Eshell prompt
     (define-key ctl-x-map [(control ?0)] 'zoom-in/out)
 
 
-#+end_src
+#+END_SRC
 
 * Prodigy
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
     (use-package prodigy
     :ensure t
     :config
     (load-if-exists "~/Dropbox/shared/prodigy-services.el")
 )
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 : t
 
 * Treemacs
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
   (use-package treemacs
     :ensure t
     :defer t
@@ -1352,12 +1405,12 @@ Eshell prompt
     (setq treemacs-header-function #'treemacs-projectile-create-header)
 )
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 
 * misc
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (defun z/nikola-deploy () ""
 (interactive)
 (venv-with-virtualenv "blog" (shell-command "cd ~/gh/cestlaz.github.io; nikola github_deploy"))
@@ -1370,12 +1423,12 @@ Eshell prompt
 (aw-flip-window)
 )
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 : z/nikola-deploy
 * Haskell
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package haskell-mode
 :ensure t
 :config
@@ -1385,9 +1438,9 @@ Eshell prompt
 
 )
 
-#+end_src
+#+END_SRC
 * personal keymap
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 ;; unset C- and M- digit keys
 ;;(dotimes (n 10)
 ;;  (global-unset-key (kbd (format "C-%d" n)))
@@ -1434,14 +1487,14 @@ Eshell prompt
 
 
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 : origami-toggle-node
 
 #  LocalWords:  DIRED Javascript Screencasts Autocomplete
 * shell-pop
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package shell-pop
 :ensure t
   :bind (("s-t" . shell-pop))
@@ -1452,41 +1505,41 @@ Eshell prompt
   (shell-pop--set-shell-type 'shell-pop-shell-type shell-pop-shell-type))
 
 
-#+end_src
+#+END_SRC
 * Wgrep
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package wgrep
 :ensure t
 )
 
-#+end_src
+#+END_SRC
 
 #+RESULTS:
 * Regex
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package pcre2el
 :ensure t
 :config
 (pcre-mode)
 )
-#+end_src
+#+END_SRC
 * Music
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package simple-mpc
 :ensure t)
 (use-package mingus
 :ensure t)
 
-#+end_src
+#+END_SRC
 * Atomic Chrome (edit in emacs)
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package atomic-chrome
 :ensure t
 :config (atomic-chrome-start-server))
 (setq atomic-chrome-buffer-open-style 'frame)
-#+end_src
+#+END_SRC
 * PDF tools
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package pdf-tools
 :ensure t)
 (use-package org-pdfview
@@ -1495,12 +1548,12 @@ Eshell prompt
 (require 'pdf-tools)
 (require 'org-pdfview)
 
-#+end_src
+#+END_SRC
 * Misc
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (setq browse-url-browser-function 'browse-url-generic
       browse-url-generic-program "firefox")
 
 (setq auto-window-vscroll nil)
 
-#+end_src
+#+END_SRC
