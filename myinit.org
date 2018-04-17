@@ -129,14 +129,6 @@
   ;; Don't ask for confirmation to delete marked buffers
   (setq ibuffer-expert t)
 #+END_SRC
-* Key frequent statistics
-#+BEGIN_SRC emacs-lisp
-  (use-package keyfreq
-    :ensure t
-    :config
-    (keyfreq-mode t)
-    (keyfreq-autosave-mode))
-#+END_SRC
 * Repos
 #+BEGIN_SRC emacs-lisp
   (require 'package)
@@ -154,6 +146,14 @@
   (unless (package-installed-p 'use-package)
     (package-refresh-contents)
     (package-install 'use-package))
+#+END_SRC
+* Key frequent statistics
+#+BEGIN_SRC emacs-lisp
+  (use-package keyfreq
+    :ensure t
+    :config
+    (keyfreq-mode t)
+    (keyfreq-autosave-mode))
 #+END_SRC
 
 * Elisp
