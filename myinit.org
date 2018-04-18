@@ -358,7 +358,7 @@ M-y" . counsel-yank-pop) :map ivy-minibuffer-map ("M-y" . ivy-next-line)))
     (define-key read-expression-map (kbd "C-r") 'counsel-expression-history))
 #+END_SRC
 
-* Auqqto Completion
+* Auto Completion
 There are two similar auto completion packages. Only one should be used.
 ** auto-complete
 #+BEGIN_SRC emacs-lisp
@@ -441,45 +441,6 @@ complition-type is defined here for setting up different completion
               (setq flycheck-clang-language-standard "c++11")
               (global-flycheck-mode t)))
   #+END_SRC
-* Ycmd
-#+BEGIN_SRC emacs-lisp
-;;(use-package ycmd
-;;  :ensure t
-;;  :init
-;;  (add-hook 'after-init-hook #'global-ycmd-mode)
-;;  :config
-;;  (progn
-;;    (set-variable 'ycmd-server-command '("python" "/usr/bin/ycmd"))
-;;    (setq ycmd-force-semantic-completion t)
-;;
-;;    (use-package company-ycmd
-;;      :ensure t
-;;      :config
-;;      (company-ycmd-setup))
-;;
-;;    (use-package flycheck-ycmd
-;;      :ensure t
-;;      :init
-;;      (add-hook 'c-mode-common-hook 'flycheck-ycmd-setup)
-;;      ;; Make sure the flycheck cache sees the parse results
-;;      ;;(add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results)
-;;      ;; Add the ycmd checker to the list of available checkers
-;;      ;;(add-to-list 'flycheck-checkers 'ycmd)
-;;      ;;(flycheck-ycmd-setup)
-;;      )
-;;
-;;    ;; Add displaying the function arguments in mini buffer using El Doc
-;;    (use-package ycmd-eldoc
-;;      :init
-;;      ;; For some reason ycmd-eldoc doesn't work properly in Python mode.
-;;      ;; I get a "connection refused" error when it connects to JediHTTP
-;;      (add-hook 'c-mode-common-hook
-;;                (lambda ()
-;;                  (ycmd-eldoc-mode t)))
-;;      )
-;;    )
-;;  )
-#+END_SRC
 * C++
 ** Basic C/C++ mode initialize
 #+BEGIN_SRC emacs-lisp
@@ -536,7 +497,8 @@ complition-type is defined here for setting up different completion
       irony
       :ensure t
       :requires (company)
-      :config (add-hook 'c++-mode-hook 'irony-mode)
+      :config (use-package irony-cdb)
+      (add-hook 'c++-mode-hook 'irony-mode)
       (add-hook 'c-mode-hook 'irony-mode)
       (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options))
     (use-package
@@ -555,21 +517,85 @@ complition-type is defined here for setting up different completion
       :requires (irony)
       :config (add-hook 'irony-mode-hook #'irony-eldoc)))
 #+END_SRC
+*** Rtags
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-flycheck_rtags ()
+    (use-package
+      flycheck-rtags
+      :ensure t
+      :requires (flycheck rtags)
+      :config (defun my-flycheck-rtags-setup ()
+                (flycheck-select-checker 'rtags)
+                ;; RTags creates more accurate overlays.
+                (setq-local flycheck-highlighting-mode nil)
+                (setq-local flycheck-check-syntax-automatically nil)
+                ;; Run flycheck 2 seconds after being idle.
+                (rtags-set-periodic-reparse-timeout 2.0))
+      (add-hook 'c-mode-hook #'my-flycheck-rtags-setup)
+      (add-hook 'c++-mode-hook #'my-flycheck-rtags-setup)))
+
+  (defun my-init-rtags ()
+    (use-package
+      rtags
+      :ensure t
+      :requires (company flycheck)
+      :config (rtags-start-process-unless-running)))
+
+  (defun my-c-company-rtags ()
+    (my-init-rtags)
+    (my-init-flycheck_rtags)
+    (use-package
+      company-rtags
+      :ensure t
+      :config
+      (setq rtags-autostart-diagnostics t)
+      (rtags-diagnostics)
+      (setq rtags-completions-enabled t)
+      (push 'company-rtags company-backend)))
+#+END_SRC
+*** Ycmd
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-company-ycmd ()
+    "Initialize ycmd for auto completion and flycheck."
+    (use-package
+      ycmd
+      :ensure t
+      :hook ((c++-mode . ycmd-mode))
+      :config (set-variable 'ycmd-server-command '("python" "/home/libing/.emacs.d/ycmd/ycmd"))
+      (setq ycmd-force-semantic-completion t)
+      (use-package
+        company-ycmd
+        :ensure t
+        :config (company-ycmd-setup))
+      (use-package
+        flycheck-ycmd
+        :ensure t
+        :config(flycheck-ycmd-setup))
+
+      ;; Add displaying the function arguments in mini buffer using El Doc
+      (use-package
+        ycmd-eldoc
+        :hook (c-mode-common-hook . (lambda ()
+                                      (ycmd-eldoc-mode t))))))
+#+END_SRC
 *** Setup Auto completion
 #+BEGIN_SRC emacs-lisp
-  (defvar my-c-company-backend "irony")
-
+  (defvar my-c-company-backend "rtags")
   (defun my-init-c-company ()
     "Initialize company backend of c/c++ mode."
     (cond ((equal my-c-company-backend "irony")
            (my-init-irony))
+          ((equal my-c-company-backend "rtags")
+           (my-c-company-rtags))
+          ((equal my-c-company-backend "ycmd")
+           (my-init-company-ycmd))
           (t (message "Wrong company backend name: %s." my-c-company-backend))))
 
   (cond ((my-completion-method-company)
          (my-init-c-company))
-         ((my-completion-method-autocomplete)
-          ())
-         (t (my-wrong-completion-method)))
+        ((my-completion-method-autocomplete)
+         ())
+        (t (my-wrong-completion-method)))
 #+END_SRC
 * Other language modes
 #+BEGIN_SRC emacs-lisp
