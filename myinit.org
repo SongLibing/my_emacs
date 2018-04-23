@@ -369,7 +369,15 @@ M-y" . counsel-yank-pop) :map ivy-minibuffer-map ("M-y" . ivy-next-line)))
     (setq ivy-display-style 'fancy)
     (define-key read-expression-map (kbd "C-r") 'counsel-expression-history))
 #+END_SRC
-
+* Flycheck
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    flycheck
+    :ensure t
+    :config (progn
+              (setq flycheck-clang-language-standard "c++11")
+              (global-flycheck-mode t)))
+  #+END_SRC
 * Auto Completion
 There are two similar auto completion packages. Only one should be used.
 ** auto-complete
@@ -444,15 +452,6 @@ complition-type is defined here for setting up different completion
          (my-init-auto-complete))
         (t (my-wrong-completion-method)))
 #+END_SRC
-* Flycheck
-#+BEGIN_SRC emacs-lisp
-  (use-package
-    flycheck
-    :ensure t
-    :config (progn
-              ;;(setq flycheck-clang-language-standard "c++11")
-              (global-flycheck-mode t)))
-  #+END_SRC
 * C++
 ** Basic C/C++ mode initialize
 #+BEGIN_SRC emacs-lisp
@@ -474,6 +473,15 @@ complition-type is defined here for setting up different completion
     :ensure t
     :config (add-hook 'c-mode-common-hook 'google-set-c-style)
     (add-hook 'c-mode-common-hook 'google-make-newline-indent))
+
+  (defun my-compile ()
+    "compile current buffer automatically."
+    (interactive)
+    (setq compilation-read-command nil)
+    (compile "make -k -j 12")
+    (setq compilation-read-command t))
+  (global-set-key (kbd "C-x c") 'my-compile)
+
 #+END_SRC
 ** Code navigation
 #+BEGIN_SRC emacs-lisp
@@ -528,6 +536,29 @@ complition-type is defined here for setting up different completion
       :ensure t
       :requires (irony)
       :config (add-hook 'irony-mode-hook #'irony-eldoc)))
+#+END_SRC
+*** Cquery
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-cquery ()
+    (use-package
+      lsp-mode
+      :ensure t)
+    (use-package
+      cquery
+      :ensure t
+      :hook (c-mode-common . lsp-cquery-enable))
+    (use-package
+      company-lsp
+      :ensure t
+      :config (push 'company-lsp company-backends)
+      (setq company-lsp-enable-snippet t)
+      (setq company-lsp-enable-recompletion t)
+      (setq commentmpany-lsp-async t))
+    (use-package
+      lsp-ui
+      :ensure t
+      :hook ((lsp-mode . lsp-ui-mode)
+             (c-mode-common . flycheck-mode))))
 #+END_SRC
 *** Rtags
 #+BEGIN_SRC emacs-lisp
@@ -584,7 +615,7 @@ complition-type is defined here for setting up different completion
     (use-package
       rtags
       :ensure t
-      :requires (company flycheck)
+      :requires (flycheck)
       :config
       (add-hook 'c-mode-hook 'rtags-start-process-unless-running)
       (add-hook 'c++-mode-hook 'rtags-start-process-unless-running)
@@ -603,11 +634,18 @@ complition-type is defined here for setting up different completion
     (my-init-flycheck_rtags)
     (use-package
       company-rtags
+      :requires (company)
       :ensure t
       :config (setq rtags-autostart-diagnostics t)
       (rtags-diagnostics)
       (setq rtags-completions-enabled t)
       (push 'company-rtags company-backend)))
+  (defun my-c-auto-complete-rtags ()
+    (my-init-rtags)
+    (my-init-flycheck_rtags)
+    (use-package
+      ac-rtags
+      :ensure t))
 #+END_SRC
 *** Ycmd
 #+BEGIN_SRC emacs-lisp
@@ -636,21 +674,33 @@ complition-type is defined here for setting up different completion
 #+END_SRC
 *** Setup Auto completion
 #+BEGIN_SRC emacs-lisp
-  (defvar my-c-company-backend "rtags")
+  (defvar my-c-backend "rtags")
   (defun my-init-c-company ()
     "Initialize company backend of c/c++ mode."
-    (cond ((equal my-c-company-backend "irony")
+    (cond ((equal my-c-backend "irony")
            (my-init-irony))
-          ((equal my-c-company-backend "rtags")
+          ((equal my-c-backend "rtags")
            (my-c-company-rtags))
-          ((equal my-c-company-backend "ycmd")
+          ((equal my-c-backend "ycmd")
            (my-init-company-ycmd))
+          ((equal my-c-backend "cquery")
+           (my-init-cquery))
+          (t (message "Wrong company backend name: %s." my-c-company-backend))))
+
+  (defun my-init-c-auto-complete ()
+    "Initialize autocomplete of c/c++ mode."
+    (cond ((equal my-c-backend "rtags")
+           (my-c-auto-complete-rtags))
+          ((equal my-c-backend "ycmd")
+           ())
+          ((equal my-c-backend "cquery")
+           ())
           (t (message "Wrong company backend name: %s." my-c-company-backend))))
 
   (cond ((my-completion-method-company)
          (my-init-c-company))
         ((my-completion-method-autocomplete)
-         ())
+         (my-init-c-auto-complete))
         (t (my-wrong-completion-method)))
 #+END_SRC
 * Other language modes
