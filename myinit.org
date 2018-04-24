@@ -599,8 +599,7 @@ complition-type is defined here for setting up different completion
                             '("#include " "<" ">" "\"")))
     (add-function :override (symbol-function 'rtags-completing-read) #'my-get-include-file)
     (rtags-find-file)
-    (remove-function (symbol-function 'rtags-completing-read) #'my-get-include-file)
-    )
+    (remove-function (symbol-function 'rtags-completing-read) #'my-get-include-file))
 
   (defun rtags-show-next-line-in-other-window ()
     (interactive)
@@ -616,7 +615,15 @@ complition-type is defined here for setting up different completion
       rtags
       :ensure t
       :requires (flycheck)
-      :config
+      :config (set rtags-display-result-backend 'default)
+      (setq rtags-process-flags (concat "--rp-nice-value 15 "
+                                        "--job-count 4 "
+o                                        ;;"--silent "
+                                        "--error-limit 50000 "
+                                        "--log-file-log-level debug "
+                                        ;;"--start-suspended "
+                                        ;;"--suspend-rp-on-crash "
+                                        "--completion-logs"))
       (add-hook 'c-mode-hook 'rtags-start-process-unless-running)
       (add-hook 'c++-mode-hook 'rtags-start-process-unless-running)
       (add-hook 'objc-mode-hook 'rtags-start-process-unless-running)
@@ -629,6 +636,12 @@ complition-type is defined here for setting up different completion
       (define-key c-mode-base-map (kbd "C-c r n") 'rtags-location-stack-forward)
       (define-key c-mode-base-map (kbd "C-c r p") 'rtags-location-stack-back)
       (define-key c-mode-base-map (kbd "C-c r t") 'rtags-dependency-tree)))
+
+  (defun remove-company-clang ()
+    (setq company-backends (seq-filter (lambda (elem)
+                                         (unless (equal elem 'company-clang) 'elem))
+                                       company-backends)))
+
   (defun my-c-company-rtags ()
     (my-init-rtags)
     (my-init-flycheck_rtags)
@@ -639,7 +652,8 @@ complition-type is defined here for setting up different completion
       :config (setq rtags-autostart-diagnostics t)
       (rtags-diagnostics)
       (setq rtags-completions-enabled t)
-      (push 'company-rtags company-backend)))
+      (push 'company-rtags company-backends)
+      (remove-company-clang)))
   (defun my-c-auto-complete-rtags ()
     (my-init-rtags)
     (my-init-flycheck_rtags)
