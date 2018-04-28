@@ -562,104 +562,111 @@ complition-type is defined here for setting up different completion
 #+END_SRC
 *** Rtags
 #+BEGIN_SRC emacs-lisp
-  (defun my-init-flycheck_rtags ()
-    (use-package
-      flycheck-rtags
-      :ensure t
-      :requires (flycheck rtags)
-      :config (defun my-flycheck-rtags-setup ()
-                (flycheck-select-checker 'rtags)
-                ;; RTags creates more accurate overlays.
-                (setq-local flycheck-highlighting-mode nil)
-                (setq-local flycheck-check-syntax-automatically nil)
-                ;; Run flycheck 2 seconds after being idle.
-                (rtags-set-periodic-reparse-timeout 2.0))
-      (add-hook 'c-mode-hook #'my-flycheck-rtags-setup)
-      (add-hook 'c++-mode-hook #'my-flycheck-rtags-setup)))
+    (defun my-init-flycheck_rtags ()
+      (use-package
+        flycheck-rtags
+        :ensure t
+        :requires (flycheck rtags)
+        :config (defun my-flycheck-rtags-setup ()
+                  (flycheck-select-checker 'rtags)
+                  ;; RTags creates more accurate overlays.
+                  (setq-local flycheck-highlighting-mode nil)
+                  (setq-local flycheck-check-syntax-automatically nil)
+                  ;; Run flycheck 2 seconds after being idle.
+                  (rtags-set-periodic-reparse-timeout 2.0))
+        (add-hook 'c-mode-hook #'my-flycheck-rtags-setup)
+        (add-hook 'c++-mode-hook #'my-flycheck-rtags-setup)))
 
-  (defun my-remove-substrings (string substrings)
-    "Remove a list of sub-string from a string."
-    (let (result)
-      (setq result string)
-      (dolist (substring substrings result)
-        (setq result (replace-regexp-in-string substring "" result)))))
+    (defun my-remove-substrings (string substrings)
+      "Remove a list of sub-string from a string."
+      (let (result)
+        (setq result string)
+        (dolist (substring substrings result)
+          (setq result (replace-regexp-in-string substring "" result)))))
 
-  (defun current-line ()
-    "Return the text of current line."
-    (buffer-substring
-     (line-beginning-position)
-     (line-end-position)))
+    (defun current-line ()
+      "Return the text of current line."
+      (buffer-substring
+       (line-beginning-position)
+       (line-end-position)))
 
-  (defun rtags-find-include-file ()
-    "Extract include file name from current line and jump to it."
-    (interactive)
-    (defun my-get-include-file (prompt collection &optional predicate require-match default-value
-                                       hist)
-      (my-remove-substrings (current-line)
-                            '("#include " "<" ">" "\"")))
-    (add-function :override (symbol-function 'rtags-completing-read) #'my-get-include-file)
-    (rtags-find-file)
-    (remove-function (symbol-function 'rtags-completing-read) #'my-get-include-file))
+    (defun rtags-find-include-file ()
+      "Extract include file name from current line and jump to it."
+      (interactive)
+      (defun my-get-include-file (prompt collection &optional predicate require-match default-value
+                                         hist)
+        (my-remove-substrings (current-line)
+                              '("#include " "<" ">" "\"")))
+      (add-function :override (symbol-function 'rtags-completing-read) #'my-get-include-file)
+      (rtags-find-file)
+      (remove-function (symbol-function 'rtags-completing-read) #'my-get-include-file))
 
-  (defun rtags-show-next-line-in-other-window ()
-    (interactive)
-    (next-line)
-    (rtags-show-in-other-window))
-  (defun rtags-show-previous-line-in-other-window ()
-    (interactive)
-    (previous-line)
-    (rtags-show-in-other-window))
+    (defun rtags-show-next-line-in-other-window ()
+      (interactive)
+      (next-line)
+      (rtags-show-in-other-window))
+    (defun rtags-show-previous-line-in-other-window ()
+      (interactive)
+      (previous-line)
+      (rtags-show-in-other-window))
 
-  (defun my-init-rtags ()
-    (use-package
-      rtags
-      :ensure t
-      :requires (flycheck)
-      :config (set rtags-display-result-backend 'default)
-      (setq rtags-process-flags (concat "--rp-nice-value 15 "
-                                        "--job-count 4 "
-o                                        ;;"--silent "
-                                        "--error-limit 50000 "
-                                        "--log-file-log-level debug "
-                                        ;;"--start-suspended "
-                                        ;;"--suspend-rp-on-crash "
-                                        "--completion-logs"))
-      (add-hook 'c-mode-hook 'rtags-start-process-unless-running)
-      (add-hook 'c++-mode-hook 'rtags-start-process-unless-running)
-      (add-hook 'objc-mode-hook 'rtags-start-process-unless-running)
-      (rtags-enable-standard-keybindings c-mode-base-map)
-      (define-key rtags-mode-map (kbd "n") 'rtags-show-next-line-in-other-window)
-      (define-key rtags-mode-map (kbd "p") 'rtags-show-previous-line-in-other-window)
-      (define-key c-mode-base-map (kbd "C-c r f") 'rtags-find-include-file)
-      (define-key c-mode-base-map (kbd "C-c r s") 'rtags-find-symbol-at-point)
-      (define-key c-mode-base-map (kbd "C-c r r") 'rtags-find-references-at-point)
-      (define-key c-mode-base-map (kbd "C-c r n") 'rtags-location-stack-forward)
-      (define-key c-mode-base-map (kbd "C-c r p") 'rtags-location-stack-back)
-      (define-key c-mode-base-map (kbd "C-c r t") 'rtags-dependency-tree)))
+    (defun my-init-rtags ()
+      (use-package
+        rtags
+        :ensure t
+        :requires (flycheck)
+        :config (set rtags-display-result-backend 'default)
+        (setq rtags-process-flags (concat "--rp-nice-value 15 "
+                                          "--job-count 4 "
+  o                                        ;;"--silent "
+                                          "--error-limit 50000 "
+                                          "--log-file-log-level debug "
+                                          ;;"--start-suspended "
+                                          ;;"--suspend-rp-on-crash "
+                                          "--completion-logs"))
+        (add-hook 'c-mode-hook 'rtags-start-process-unless-running)
+        (add-hook 'c++-mode-hook 'rtags-start-process-unless-running)
+        (add-hook 'objc-mode-hook 'rtags-start-process-unless-running)
+        (rtags-enable-standard-keybindings c-mode-base-map)
+        (define-key rtags-mode-map (kbd "n") 'rtags-show-next-line-in-other-window)
+        (define-key rtags-mode-map (kbd "p") 'rtags-show-previous-line-in-other-window)
+        (define-key c-mode-base-map (kbd "C-c r f") 'rtags-find-include-file)
+        (define-key c-mode-base-map (kbd "C-c r s") 'rtags-find-symbol-at-point)
+        (define-key c-mode-base-map (kbd "C-c r r") 'rtags-find-references-at-point)
+        (define-key c-mode-base-map (kbd "C-c r n") 'rtags-location-stack-forward)
+        (define-key c-mode-base-map (kbd "C-c r p") 'rtags-location-stack-back)
+        (define-key c-mode-base-map (kbd "C-c r t") 'rtags-dependency-tree))
+;;      (use-package cmake-ide
+;;        :requires (rtags)
+;;        :config
+;;        (setq cmake-ide-rdm-executable (rtags-executable-find "rdm"))
+;;        (setq cmake-ide-rc-executable (rtags-executable-find "rc"))
+;;        (cmake-ide-setup))
+)
 
-  (defun remove-company-clang ()
-    (setq company-backends (seq-filter (lambda (elem)
-                                         (unless (equal elem 'company-clang) 'elem))
-                                       company-backends)))
+    (defun remove-company-clang ()
+      (setq company-backends (seq-filter (lambda (elem)
+                                           (unless (equal elem 'company-clang) 'elem))
+                                         company-backends)))
 
-  (defun my-c-company-rtags ()
-    (my-init-rtags)
-    (my-init-flycheck_rtags)
-    (use-package
-      company-rtags
-      :requires (company)
-      :ensure t
-      :config (setq rtags-autostart-diagnostics t)
-      (rtags-diagnostics)
-      (setq rtags-completions-enabled t)
-      (push 'company-rtags company-backends)
-      (remove-company-clang)))
-  (defun my-c-auto-complete-rtags ()
-    (my-init-rtags)
-    (my-init-flycheck_rtags)
-    (use-package
-      ac-rtags
-      :ensure t))
+    (defun my-c-company-rtags ()
+      (my-init-rtags)
+      (my-init-flycheck_rtags)
+      (use-package
+        company-rtags
+        :requires (company)
+        :ensure t
+        :config (setq rtags-autostart-diagnostics t)
+        (rtags-diagnostics)
+        (setq rtags-completions-enabled t)
+        (push 'company-rtags company-backends)
+        (remove-company-clang)))
+    (defun my-c-auto-complete-rtags ()
+      (my-init-rtags)
+      (my-init-flycheck_rtags)
+      (use-package
+        ac-rtags
+        :ensure t))
 #+END_SRC
 *** Ycmd
 #+BEGIN_SRC emacs-lisp
@@ -688,7 +695,7 @@ o                                        ;;"--silent "
 #+END_SRC
 *** Setup Auto completion
 #+BEGIN_SRC emacs-lisp
-  (defvar my-c-backend "rtags")
+  (defvar my-c-backend "irony")
   (defun my-init-c-company ()
     "Initialize company backend of c/c++ mode."
     (cond ((equal my-c-backend "irony")
