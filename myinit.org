@@ -10,6 +10,7 @@
 
   (global-set-key (kbd "M-n") 'next-lines)
   (global-set-key (kbd "M-p") 'previous-lines)
+  (global-set-key (kbd "C-x k") 'kill-this-buffer)
 #+END_SRC
 * Init Setting
 #+BEGIN_SRC emacs-lisp
