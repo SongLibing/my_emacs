@@ -1050,8 +1050,7 @@ complition-type is defined here for setting up different completion
   :init
   (global-git-gutter-mode +1))
 
-(global-set-key (kbd "M-g M-g") 'hydra-git-gutter/body)
-
+(global-set-key (kbd "M-g g") 'hydra-git-gutter/body)
 (use-package git-timemachine
   :ensure t)
 
