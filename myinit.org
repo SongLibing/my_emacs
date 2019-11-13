@@ -1,6 +1,8 @@
 #+STARTUP: overview
 * Keybindings
 #+BEGIN_SRC emacs-lisp
+  (defun set_window_dedicated ()
+    (set-window-dedicated-p (current-buffer)))
   (defun next-lines ()
     (interactive)
     (forward-line 5))
@@ -11,6 +13,9 @@
   (global-set-key (kbd "M-n") 'next-lines)
   (global-set-key (kbd "M-p") 'previous-lines)
   (global-set-key (kbd "C-x k") 'kill-this-buffer)
+  (global-set-key (kbd "C-M-f") 'set_window_dedicated)
+  (global-set-key (kbd "C-c f") 'clang-format-buffer)
+
 #+END_SRC
 * Init Setting
 #+BEGIN_SRC emacs-lisp
@@ -58,6 +63,7 @@
   (setq tab-width 2)
   ;; Show <tab> as two spaces
   (standard-display-ascii ?\t "  ")
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 #+END_SRC
 * Interface tweaks
 #+BEGIN_SRC emacs-lisp
@@ -370,7 +376,7 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     :ensure t
     :config (progn
               (setq flycheck-clang-language-standard "c++11")
-              (global-flycheck-mode t)))
+              (global-flycheck-mode -1)))
   #+END_SRC
 * Auto Completion
 There are two similar auto completion packages. Only one should be used.
@@ -482,7 +488,7 @@ complition-type is defined here for setting up different completion
   (use-package
     xcscope
     :ensure t
-    :config (setq cscope-program "gtags-cscope")
+    :config (setq cscope-program "global")
     ;;(setq cscope-program "cscope")
     (add-to-list 'cscope-indexer-suffixes "*.ic")
     (add-to-list 'cscope-indexer-suffixes "*.yy")
@@ -612,7 +618,7 @@ complition-type is defined here for setting up different completion
         :config (set rtags-display-result-backend 'default)
         (setq rtags-process-flags (concat "--rp-nice-value 15 "
                                           "--job-count 4 "
-  o                                        ;;"--silent "
+                                          ;;"--silent "
                                           "--error-limit 50000 "
                                           "--log-file-log-level debug "
                                           ;;"--start-suspended "
@@ -1053,6 +1059,8 @@ complition-type is defined here for setting up different completion
   (global-git-gutter-mode +1))
 
 (global-set-key (kbd "M-g g") 'hydra-git-gutter/body)
+(global-set-key (kbd "M-g b") 'magit-blame)
+(global-set-key (kbd "M-g a") 'magit-blame-mode)
 (use-package git-timemachine
   :ensure t)
 
