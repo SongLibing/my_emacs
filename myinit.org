@@ -326,6 +326,7 @@ Org bullets makes things look pretty
       (progn
         (setq aw-scope 'frame)
         (global-set-key (kbd "C-x O") 'other-frame)
+	(setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
         (global-set-key [remap other-window] 'ace-window)
         (custom-set-faces '(aw-leading-char-face ((t
                                                    (:inherit ace-jump-face-foreground
