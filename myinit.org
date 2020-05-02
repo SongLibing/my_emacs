@@ -15,6 +15,7 @@
   (global-set-key (kbd "C-x k") 'kill-this-buffer)
   (global-set-key (kbd "C-M-f") 'set_window_dedicated)
   (global-set-key (kbd "C-c f") 'clang-format-buffer)
+  (global-set-key (kbd "C-c r") 'clang-format-region)
 
 #+END_SRC
 * Init Setting
@@ -326,7 +327,7 @@ Org bullets makes things look pretty
       (progn
         (setq aw-scope 'frame)
         (global-set-key (kbd "C-x O") 'other-frame)
-	(setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
+        (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
         (global-set-key [remap other-window] 'ace-window)
         (custom-set-faces '(aw-leading-char-face ((t
                                                    (:inherit ace-jump-face-foreground
@@ -344,6 +345,8 @@ Org bullets makes things look pretty
     (setq sml/theme 'powerline)
     (sml/setup))
   (load-theme 'tango-dark)
+  (custom-set-faces
+    '(term-color-blue ((t (:background "blue2" :foreground "light sky blue")))))
 #+END_SRC
 * Swiper / Ivy / Counsel
 Swiper gives us a really efficient incremental search with regular expressions
