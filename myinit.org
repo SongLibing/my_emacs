@@ -1062,9 +1062,16 @@ complition-type is defined here for setting up different completion
   :init
   (global-git-gutter-mode +1))
 
+(defun magit-diff-master()
+  (interactive)
+  (magit-diff-range "master"))
+
 (global-set-key (kbd "M-g g") 'hydra-git-gutter/body)
 (global-set-key (kbd "M-g b") 'magit-blame)
 (global-set-key (kbd "M-g a") 'magit-blame-mode)
+(global-set-key (kbd "M-g s") 'magit-show-commit)
+(global-set-key (kbd "M-g d") 'magit-diff-master)
+
 (use-package git-timemachine
   :ensure t)
 
