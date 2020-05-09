@@ -20,6 +20,9 @@
 #+END_SRC
 * Init Setting
 #+BEGIN_SRC emacs-lisp
+    (custom-set-variables
+    '(initial-frame-alist (quote ((fullscreen . maximized)))))
+  
   ;;;;;;;;;
   ;; By default Emacs triggers garbage collection at ~0.8MB which makes
   ;; startup really slow. Since most systems have at least 64MB of memory,
