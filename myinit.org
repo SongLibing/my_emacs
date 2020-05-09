@@ -172,8 +172,8 @@
   (use-package keyfreq
     :ensure t
     :config
-    (keyfreq-mode t)
-    (keyfreq-autosave-mode))
+    (setq keyfreq-autosave-mode t)
+    (setq keyfreq-autosave-timeout 10))
 #+END_SRC
 
 * Elisp
