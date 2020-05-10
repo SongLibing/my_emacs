@@ -16,7 +16,8 @@
   (global-set-key (kbd "C-M-f") 'set_window_dedicated)
   (global-set-key (kbd "C-c f") 'clang-format-buffer)
   (global-set-key (kbd "C-c r") 'clang-format-region)
-
+  (global-set-key (kbd "C-<") 'previous-buffer)
+  (global-set-key (kbd "C->") 'next-buffer)
 #+END_SRC
 * Init Setting
 #+BEGIN_SRC emacs-lisp
@@ -68,6 +69,8 @@
   ;; Show <tab> as two spaces
   (standard-display-ascii ?\t "  ")
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+  (winner-mode t)
+  (desktop-save-mode t)
 #+END_SRC
 * Interface tweaks
 #+BEGIN_SRC emacs-lisp
@@ -122,6 +125,12 @@
   (add-hook 'term-mode-hook 'my-term-hook)
   (ansi-term my-term-shell)
   (ansi-term "/bin/bash")
+#+END_SRC
+* rg
+#+BEGIN_SRC emacs-lisp
+  (use-package rg
+    :ensure t
+    :config (rg-enable-default-bindings))
 #+END_SRC
 * IBUFFER
 #+BEGIN_SRC emacs-lisp
@@ -355,7 +364,6 @@ Org bullets makes things look pretty
 Swiper gives us a really efficient incremental search with regular expressions
 and Ivy / Counsel replace a lot of ido or helms completion functionality
 #+BEGIN_SRC emacs-lisp
-
   (use-package
     ivy
     :ensure t
@@ -376,95 +384,77 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
       ;; ivy has a sort function list to provide sort method's to functions.
       (map-put ivy-sort-functions-alist #'counsel-M-x #'string-lessp)))
 #+END_SRC
-* Flycheck
+* Company
 #+BEGIN_SRC emacs-lisp
   (use-package
-    flycheck
+    company
     :ensure t
-    :config (progn
-              (setq flycheck-clang-language-standard "c++11")
-              (global-flycheck-mode -1)))
-  #+END_SRC
-* Auto Completion
-There are two similar auto completion packages. Only one should be used.
-** auto-complete
+    :config (setq company-idle-delay 0)
+    (setq company-minimum-prefix-length 3)
+    (setq company-show-numbers t)
+    (global-company-mode t))
+#+END_SRC
+* LSP Mode
 #+BEGIN_SRC emacs-lisp
-  (defun my-init-auto-complete ()
-    "Load 'auto-complete' and enable it globally."
+  (defun my-init-lsp()
+    (setq read-process-output-max (* 1024 1024))
+    (setq flymake-mode -1)
     (use-package
-      auto-complete
+      lsp-mode
       :ensure t
-      :init (progn (ac-config-default)
-                   (global-auto-complete-mode t)))
+      :hook ((c-mode . lsp)
+             (c++-mode . lsp)
+             ;;(perl-mode . lsp)
+             ;;(python-mode . lsp)
+             (lsp-mode . lsp-enable-which-key-integration))
+      :bind (:map lsp-command-map
+             ("f" . lsp-format-buffer)
+             ("D" . lsp-find-definition)
+             ("R" . lsp-find-references))
+      :custom (lsp-keymap-prefix "C-l")
+              (lsp-idle-delay 0)
+              (lsp-enable-folding t)
+              (lsp-enable-snippet t)
+              (lsp-symbol-highlighting-skip-current nil)
+              (lsp-semantic-highlighting nil)
+        :commands lsp)
     (use-package
-      pos-tip
+      lsp-java
       :ensure t)
-
     (use-package
-      ac-clang
+      lsp-ui
       :ensure t
-      :after pos-tip
-      :init (add-hook 'c-mode-common-hook '(lambda ()
-                                              (setq ac-clang-cflags CFLAGS)
-                                              (ac-clang-active-after-modify)))))
-#+END_SRC
-** company
-#+BEGIN_SRC emacs-lisp
-  (defun my-init-company ()
-    "Load company and irony and enable them globally."
+      :bind (:map lsp-command-map
+             ("m" . lsp-ui-imenu)
+             ("i" . lsp-ui-doc-glance)
+             ("p" . lsp-ui-find-prev-reference)
+             ("n" . lsp-ui-find-next-reference)
+             ("d" . lsp-ui-peek-find-definitions)
+             ("r" . lsp-ui-peek-find-references))
+      :custom (lsp-ui-sideline-show-code-actions nil)
+              (lsp-ui-doc-enable nil)
+      :commands lsp-ui-mode)
     (use-package
-      company
+      lsp-ivy
       :ensure t
-      :config (setq company-idle-delay 0)
-      (setq company-minimum-prefix-length 3)
-      (setq company-show-numbers t)
-      (global-company-mode t))
-
-    (defun my/python-mode-hook ()
-      (add-to-list 'company-backends 'company-jedi))
-
-    (add-hook 'python-mode-hook 'my/python-mode-hook)
+      :commands lsp-ivy-workspace-symbol)
     (use-package
-      company-jedi
+      lsp-treemacs
       :ensure t
-      :config (add-hook 'python-mode-hook 'jedi:setup))
+      :commands lsp-treemacs-errors-list)
+    (use-package
+      dap-mode
+      :ensure t)
+    (custom-set-variables '(lsp-ui-doc-enable nil)))
 
-    (defun my/python-mode-hook ()
-      (add-to-list 'company-backends 'company-jedi))
-
-    (add-hook 'python-mode-hook 'my/python-mode-hook))
-#+END_SRC
-
-** Setting up auto complition type
-complition-type is defined here for setting up different completion
-#+BEGIN_SRC emacs-lisp
-  ;; Define my-comletion-method C++ and other language code will use it
-  ;; We also can check the type in emacs
-  (defvar my-completion-method "company"
-    "The completion method used.  It is either 'company' or 'auto-complete'.")
-
-  (defun my-completion-method-company()
-    (equal my-completion-method "company"))
-
-  (defun my-completion-method-autocomplete()
-    (equal my-completion-method "auto-complete"))
-
-  (defun my-wrong-completion-method()
-    (print "Wrong value of my-init-auto-complete."
-           "The value must be 'company' or 'auto-comletion."))
-
-  (cond ((my-completion-method-company)
-         (my-init-company))
-        ((my-completion-method-autocomplete)
-         (my-init-auto-complete))
-        (t (my-wrong-completion-method)))
+  (my-init-lsp)
 #+END_SRC
 * C++
 ** Basic C/C++ mode initialize
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'auto-mode-alist '("\\.ic\\'" . c++-mode))
-  (add-to-list 'auto-mode-alist '("\\.yy\\'" . c++-mode))
-  (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.ic\\'" . c-mode))
+  (add-to-list 'auto-mode-alist '("\\.yy\\'" . c-mode))
+  (add-to-list 'auto-mode-alist '("\\.h\\'" . c-mode))
   (use-package
     modern-cpp-font-lock
     :ensure t
@@ -490,246 +480,19 @@ complition-type is defined here for setting up different completion
   (global-set-key (kbd "C-x c") 'my-compile)
 
 #+END_SRC
-** Code navigation
-#+BEGIN_SRC emacs-lisp
-  (use-package
-    xcscope
-    :ensure t
-    :config (setq cscope-program "global")
-    ;;(setq cscope-program "cscope")
-    (add-to-list 'cscope-indexer-suffixes "*.ic")
-    (add-to-list 'cscope-indexer-suffixes "*.yy")
-    (add-to-list 'cscope-indexer-suffixes "*.x")
-    (cscope-setup))
-
-  (use-package
-    ggtags
-    :ensure t
-    :config (add-hook 'c-mode-common-hook (lambda ()
-                                            (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
-                                              (ggtags-mode 1)))))
-#+END_SRC
 ** Initialize cmake mode
 #+BEGIN_SRC emacs-lisp
   (use-package
     cmake-mode
     :ensure t)
 #+END_SRC
-** Auto completition
-*** Irony
+** Mysql cmake
 #+BEGIN_SRC emacs-lisp
-  (defun my-init-irony()
-    "Initialize irony for auto completion and flycheck."
-    (use-package
-      irony
-      :ensure t
-      :requires (company)
-      :config (use-package irony-cdb)
-      (add-hook 'c++-mode-hook 'irony-mode)
-      (add-hook 'c-mode-hook 'irony-mode)
-      (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options))
-    (use-package
-      company-irony
-      :ensure t
-      :requires (irony)
-      :config (add-to-list 'company-backends 'company-irony))
-    (use-package
-      flycheck-irony
-      :ensure t
-      :requires (flycheck irony)
-      :config (add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
-    (use-package
-      irony-eldoc
-      :ensure t
-      :requires (irony)
-      :config (add-hook 'irony-mode-hook #'irony-eldoc)))
-#+END_SRC
-*** Cquery
-#+BEGIN_SRC emacs-lisp
-  (defun my-init-cquery ()
-    (use-package
-      lsp-mode
-      :ensure t)
-    (use-package
-      cquery
-      :ensure t
-      :hook (c-mode-common . lsp-cquery-enable))
-    (use-package
-      company-lsp
-      :ensure t
-      :config (push 'company-lsp company-backends)
-      (setq company-lsp-enable-snippet t)
-      (setq company-lsp-enable-recompletion t)
-      (setq commentmpany-lsp-async t))
-    (use-package
-      lsp-ui
-      :ensure t
-      :hook ((lsp-mode . lsp-ui-mode)
-             (c-mode-common . flycheck-mode))))
-#+END_SRC
-*** Rtags
-#+BEGIN_SRC emacs-lisp
-    (defun my-init-flycheck_rtags ()
-      (use-package
-        flycheck-rtags
-        :ensure t
-        :requires (flycheck rtags)
-        :config (defun my-flycheck-rtags-setup ()
-                  (flycheck-select-checker 'rtags)
-                  ;; RTags creates more accurate overlays.
-                  (setq-local flycheck-highlighting-mode nil)
-                  (setq-local flycheck-check-syntax-automatically nil)
-                  ;; Run flycheck 2 seconds after being idle.
-                  (rtags-set-periodic-reparse-timeout 2.0))
-        (add-hook 'c-mode-hook #'my-flycheck-rtags-setup)
-        (add-hook 'c++-mode-hook #'my-flycheck-rtags-setup)))
-
-    (defun my-remove-substrings (string substrings)
-      "Remove a list of sub-string from a string."
-      (let (result)
-        (setq result string)
-        (dolist (substring substrings result)
-          (setq result (replace-regexp-in-string substring "" result)))))
-
-    (defun current-line ()
-      "Return the text of current line."
-      (buffer-substring
-       (line-beginning-position)
-       (line-end-position)))
-
-    (defun rtags-find-include-file ()
-      "Extract include file name from current line and jump to it."
-      (interactive)
-      (defun my-get-include-file (prompt collection &optional predicate require-match default-value
-                                         hist)
-        (my-remove-substrings (current-line)
-                              '("#include " "<" ">" "\"")))
-      (add-function :override (symbol-function 'rtags-completing-read) #'my-get-include-file)
-      (rtags-find-file)
-      (remove-function (symbol-function 'rtags-completing-read) #'my-get-include-file))
-
-    (defun rtags-show-next-line-in-other-window ()
-      (interactive)
-      (next-line)
-      (rtags-show-in-other-window))
-    (defun rtags-show-previous-line-in-other-window ()
-      (interactive)
-      (previous-line)
-      (rtags-show-in-other-window))
-
-    (defun my-init-rtags ()
-      (use-package
-        rtags
-        :ensure t
-        :requires (flycheck)
-        :config (set rtags-display-result-backend 'default)
-        (setq rtags-process-flags (concat "--rp-nice-value 15 "
-                                          "--job-count 4 "
-                                          ;;"--silent "
-                                          "--error-limit 50000 "
-                                          "--log-file-log-level debug "
-                                          ;;"--start-suspended "
-                                          ;;"--suspend-rp-on-crash "
-                                          "--completion-logs"))
-        (add-hook 'c-mode-hook 'rtags-start-process-unless-running)
-        (add-hook 'c++-mode-hook 'rtags-start-process-unless-running)
-        (add-hook 'objc-mode-hook 'rtags-start-process-unless-running)
-        (rtags-enable-standard-keybindings c-mode-base-map)
-        (define-key rtags-mode-map (kbd "n") 'rtags-show-next-line-in-other-window)
-        (define-key rtags-mode-map (kbd "p") 'rtags-show-previous-line-in-other-window)
-        (define-key c-mode-base-map (kbd "C-c r f") 'rtags-find-include-file)
-        (define-key c-mode-base-map (kbd "C-c r s") 'rtags-find-symbol-at-point)
-        (define-key c-mode-base-map (kbd "C-c r r") 'rtags-find-references-at-point)
-        (define-key c-mode-base-map (kbd "C-c r n") 'rtags-location-stack-forward)
-        (define-key c-mode-base-map (kbd "C-c r p") 'rtags-location-stack-back)
-        (define-key c-mode-base-map (kbd "C-c r t") 'rtags-dependency-tree))
-;;      (use-package cmake-ide
-;;        :requires (rtags)
-;;        :config
-;;        (setq cmake-ide-rdm-executable (rtags-executable-find "rdm"))
-;;        (setq cmake-ide-rc-executable (rtags-executable-find "rc"))
-;;        (cmake-ide-setup))
-)
-
-    (defun remove-company-clang ()
-      (setq company-backends (seq-filter (lambda (elem)
-                                           (unless (equal elem 'company-clang) 'elem))
-                                         company-backends)))
-
-    (defun my-c-company-rtags ()
-      (my-init-rtags)
-      (my-init-flycheck_rtags)
-      (use-package
-        company-rtags
-        :requires (company)
-        :ensure t
-        :config (setq rtags-autostart-diagnostics t)
-        (rtags-diagnostics)
-        (setq rtags-completions-enabled t)
-        (push 'company-rtags company-backends)
-        (remove-company-clang)))
-    (defun my-c-auto-complete-rtags ()
-      (my-init-rtags)
-      (my-init-flycheck_rtags)
-      (use-package
-        ac-rtags
-        :ensure t))
-#+END_SRC
-*** Ycmd
-#+BEGIN_SRC emacs-lisp
-  (defun my-init-company-ycmd ()
-    "Initialize ycmd for auto completion and flycheck."
-    (use-package
-      ycmd
-      :ensure t
-      :hook ((c++-mode . ycmd-mode))
-      :config (set-variable 'ycmd-server-command '("python" "/home/libing/.emacs.d/ycmd/ycmd"))
-      (setq ycmd-force-semantic-completion t)
-      (use-package
-        company-ycmd
-        :ensure t
-        :config (company-ycmd-setup))
-      (use-package
-        flycheck-ycmd
-        :ensure t
-        :config(flycheck-ycmd-setup))
-
-      ;; Add displaying the function arguments in mini buffer using El Doc
-      (use-package
-        ycmd-eldoc
-        :hook (c-mode-common-hook . (lambda ()
-                                      (ycmd-eldoc-mode t))))))
-#+END_SRC
-*** Setup Auto completion
-#+BEGIN_SRC emacs-lisp
-  (defvar my-c-backend "irony")
-  (defun my-init-c-company ()
-    "Initialize company backend of c/c++ mode."
-    (cond ((equal my-c-backend "irony")
-           (my-init-irony))
-          ((equal my-c-backend "rtags")
-           (my-c-company-rtags))
-          ((equal my-c-backend "ycmd")
-           (my-init-company-ycmd))
-          ((equal my-c-backend "cquery")
-           (my-init-cquery))
-          (t (message "Wrong company backend name: %s." my-c-company-backend))))
-
-  (defun my-init-c-auto-complete ()
-    "Initialize autocomplete of c/c++ mode."
-    (cond ((equal my-c-backend "rtags")
-           (my-c-auto-complete-rtags))
-          ((equal my-c-backend "ycmd")
-           ())
-          ((equal my-c-backend "cquery")
-           ())
-          (t (message "Wrong company backend name: %s." my-c-company-backend))))
-
-  (cond ((my-completion-method-company)
-         (my-init-c-company))
-        ((my-completion-method-autocomplete)
-         (my-init-c-auto-complete))
-        (t (my-wrong-completion-method)))
+  (defun mysql_cmake()
+    (interactive)
+    (projectile-with-default-dir (projectile-ensure-project (projectile-project-root))
+      (async-shell-command
+       "cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DFORCE_INSOURCE_BUILD=1 -DWITH_BOOST=~/work/boost")))
 #+END_SRC
 * Other language modes
 #+BEGIN_SRC emacs-lisp
@@ -746,7 +509,6 @@ complition-type is defined here for setting up different completion
   :ensure t
   :bind ("M-s" . avy-goto-word-1)) ;; changed from char as per jcs
   #+END_SRC
-
 * Yasnippet
   #+BEGIN_SRC emacs-lisp
     (use-package yasnippet
