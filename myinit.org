@@ -199,7 +199,8 @@ Using elisp-format to format elisp code in a buffer
     (elisp-format-buffer)
     (delete-trailing-whitespace))
 
-  (global-set-key (kbd "M-l") 'my-format-elisp)
+  (add-hook 'lisp-mode-hook
+    (lambda() (define-key lisp-mode-map (kbd "M-l") 'my-format-elisp)))
 #+END_SRC
 * Org mode
 Org bullets makes things look pretty
@@ -350,15 +351,38 @@ Org bullets makes things look pretty
 
 * Themes and modeline
 #+BEGIN_SRC emacs-lisp
+  ;;  (use-package
+  ;;    smart-mode-line-powerline-theme
+  ;;    :ensure t
+  ;;    :config (setq sml/no-confirm-load-theme t)
+  ;;    (setq sml/theme 'powerline)
+  ;;    (sml/setup))
+  (custom-set-variables '(spacemacs-theme-comment-bg nil)
+                        '(spacemacs-theme-custom-colors '((bg1 . "#300a24")
+                                                          (comment . "#7fff00"))))
+  (load-theme 'spacemacs-dark t)
+  (set-background-color "#300a24")
+  (setq )
   (use-package
-    smart-mode-line-powerline-theme
+    spaceline
     :ensure t
-    :config (setq sml/no-confirm-load-theme t)
-    (setq sml/theme 'powerline)
-    (sml/setup))
-  (load-theme 'tango-dark)
-  (custom-set-faces
-    '(term-color-blue ((t (:background "blue2" :foreground "light sky blue")))))
+    :config (setq powerline-default-separator 'slant)
+            (spaceline-emacs-theme))
+
+  ;; font scaling
+  (defun scale-increase()
+    (interactive)
+    (default-text-scale-increase)
+    (spaceline-emacs-theme))
+  (defun scale-decrease()
+    (interactive)
+    (default-text-scale-decrease)
+    (spaceline-emacs-theme))
+  (use-package
+    default-text-scale
+    :ensure t
+    :config (global-set-key (kbd "C-M-=") 'scale-increase)
+            (global-set-key (kbd "C-M--") 'scale-decrease))
 #+END_SRC
 * Swiper / Ivy / Counsel
 Swiper gives us a really efficient incremental search with regular expressions
@@ -412,11 +436,12 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
              ("D" . lsp-find-definition)
              ("R" . lsp-find-references))
       :custom (lsp-keymap-prefix "C-l")
-              (lsp-idle-delay 0)
+              (lsp-idle-delay 0.5)
               (lsp-enable-folding t)
               (lsp-enable-snippet t)
               (lsp-symbol-highlighting-skip-current nil)
               (lsp-semantic-highlighting nil)
+              (lsp-server-trace "verbose")
         :commands lsp)
     (use-package
       lsp-java
@@ -1202,12 +1227,6 @@ Eshell prompt
 
 
 
-    ;; font scaling
-    (use-package default-text-scale
-      :ensure t
-     :config
-      (global-set-key (kbd "C-M-=") 'default-text-scale-increase)
-      (global-set-key (kbd "C-M--") 'default-text-scale-decrease))
 
 
     ;; (use-package frame-cmds :ensure t)
