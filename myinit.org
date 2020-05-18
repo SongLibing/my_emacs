@@ -401,13 +401,37 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 #+END_SRC
 * Company
 #+BEGIN_SRC emacs-lisp
+  (defun convert-to-char(numbered)
+     (format " %c %d" (aref "fjdkslaghi" (- numbered 1)) numbered))
+
   (use-package
     company
     :ensure t
     :config (setq company-idle-delay 0)
     (setq company-minimum-prefix-length 3)
     (setq company-show-numbers t)
+    (setq company-show-numbers-function #'convert-to-char)
     (global-company-mode t))
+
+  (defun company-complete-char(char)
+    ;; list is for set "char" argument
+    (interactive
+      (list (let* ((type (event-basic-type last-command-event)))
+                  (if (characterp type) type ?\;))))
+
+    (let* ((char-list (subseq '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i) 0
+                              (min 10 (- company-candidates-length
+                                         company-tooltip-offset))))
+           (n (cl-position char char-list)))
+      (when (and (company-manual-begin)
+                 (cl-find char char-list))
+            (company-finish (nth (+ n company-tooltip-offset)
+                              company-candidates)))))
+  ;; bind keys
+  (dolist (char '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i))
+    (define-key company-mode-map
+                (read-kbd-macro (format "M-%c" char))
+                'company-complete-char))
 #+END_SRC
 * LSP Mode
 #+BEGIN_SRC emacs-lisp
