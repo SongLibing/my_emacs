@@ -1,0 +1,24 @@
+diff --git a/myinit.org b/myinit.org
+index 6e5d767..3ebeaa3 100644
+--- a/myinit.org
++++ b/myinit.org
+@@ -110,8 +110,8 @@
+     (define-key term-raw-map "\C-y" 'my-term-paste))
+ 
+   (add-hook 'term-mode-hook 'my-term-hook)
+-  (ansi-term my-term-shell)
+-  (ansi-term "/bin/bash")
++  (setq shell-switcher-new-shell-function 'shell-switcher-make-ansi-term)
++
+ #+END_SRC
+ * IBUFFER
+ #+BEGIN_SRC emacs-lisp
+@@ -482,7 +482,7 @@ complition-type is defined here for setting up different completion
+   (use-package
+     xcscope
+     :ensure t
+-    :config (setq cscope-program "gtags-cscope")
++    :config (setq cscope-program "global")
+     ;;(setq cscope-program "cscope")
+     (add-to-list 'cscope-indexer-suffixes "*.ic")
+     (add-to-list 'cscope-indexer-suffixes "*.yy")

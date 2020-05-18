@@ -10,8 +10,8 @@
     (interactive)
     (forward-line -5))
 
-  (global-set-key (kbd "M-n") 'next-lines)
-  (global-set-key (kbd "M-p") 'previous-lines)
+  ;;(global-set-key (kbd "M-n") 'next-lines)
+  ;;(global-set-key (kbd "M-p") 'previous-lines)
   (global-set-key (kbd "C-x k") 'kill-this-buffer)
   (global-set-key (kbd "C-M-f") 'set_window_dedicated)
   (global-set-key (kbd "C-c f") 'clang-format-buffer)
@@ -302,15 +302,6 @@ Org bullets makes things look pretty
   #+RESULTS:
   : make-capture-frame
 
-* Dired
-#+BEGIN_SRC emacs-lisp
-  ; wiki melpa problem
-  ;;(use-package dired+
-  ;;  :ensure t
-  ;;  :config (require 'dired+)
-  ;;  )
-#+END_SRC
-
 * Undo Tree
 #+BEGIN_SRC emacs-lisp
   (use-package undo-tree
@@ -340,7 +331,7 @@ Org bullets makes things look pretty
       (progn
         (setq aw-scope 'frame)
         (global-set-key (kbd "C-x O") 'other-frame)
-        (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
+        (setq aw-keys '(?f ?j ?d ?k ?s ?l ?g ?h ?\;))
         (global-set-key [remap other-window] 'ace-window)
         (custom-set-faces '(aw-leading-char-face ((t
                                                    (:inherit ace-jump-face-foreground
@@ -426,8 +417,8 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     (use-package
       lsp-mode
       :ensure t
-      :hook ((c-mode . lsp)
-             (c++-mode . lsp)
+      :hook ((c-mode . lsp-deferred)
+             (c++-mode . lsp-deferred)
              ;;(perl-mode . lsp)
              ;;(python-mode . lsp)
              (lsp-mode . lsp-enable-which-key-integration))
@@ -530,9 +521,24 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 * Avy - navigate by searching for a letter on the screen and jumping to it
   See https://github.com/abo-abo/avy for more info
   #+BEGIN_SRC emacs-lisp
-  (use-package avy
-  :ensure t
-  :bind ("M-s" . avy-goto-word-1)) ;; changed from char as per jcs
+    (use-package avy
+      :ensure t
+      :config (setq avy-keys '(?a ?f ?j ?d ?k ?r ?u ?t ?y ?e ?i ?w ?o ?q ?p
+                               ?v ?m ?b ?n ?c ?s ?l ?\ ))
+      :custom (avy-style 'pre)
+              (avy-goto-word-0-regexp "[^ \r\n\t.(]+")
+              (avy-background t)
+      :bind ("M-s" . avy-goto-word-1)) ;; changed from char as per jcs
+
+    (defun avy-goto-word-crt-line ()
+      "Jump to a word start on the current gline only."
+      (interactive)
+      (avy-with avy-goto-word-0 (avy-goto-word-0 nil (line-beginning-position)
+                                                 (line-end-position))))
+    (global-set-key (kbd "M-f") 'avy-goto-word-crt-line)
+    (global-set-key (kbd "M-b") 'avy-goto-word-0)
+    (global-set-key (kbd "M-n") 'avy-goto-line-below)
+    (global-set-key (kbd "M-p") 'avy-goto-line-above)
   #+END_SRC
 * Yasnippet
   #+BEGIN_SRC emacs-lisp
