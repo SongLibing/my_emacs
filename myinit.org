@@ -13,17 +13,17 @@
   ;;(global-set-key (kbd "M-n") 'next-lines)
   ;;(global-set-key (kbd "M-p") 'previous-lines)
   (global-set-key (kbd "C-x k") 'kill-this-buffer)
-  (global-set-key (kbd "C-M-f") 'set_window_dedicated)
   (global-set-key (kbd "C-c f") 'clang-format-buffer)
   (global-set-key (kbd "C-c r") 'clang-format-region)
   (global-set-key (kbd "C-<") 'previous-buffer)
   (global-set-key (kbd "C->") 'next-buffer)
+  (global-set-key (kbd "C-<") 'pop-gloal-mark)
 #+END_SRC
 * Init Setting
 #+BEGIN_SRC emacs-lisp
-    (custom-set-variables
+   (custom-set-variables
     '(initial-frame-alist (quote ((fullscreen . maximized)))))
-  
+
   ;;;;;;;;;
   ;; By default Emacs triggers garbage collection at ~0.8MB which makes
   ;; startup really slow. Since most systems have at least 64MB of memory,
@@ -126,12 +126,6 @@
   (ansi-term my-term-shell)
   (ansi-term "/bin/bash")
 #+END_SRC
-* rg
-#+BEGIN_SRC emacs-lisp
-  (use-package rg
-    :ensure t
-    :config (rg-enable-default-bindings))
-#+END_SRC
 * IBUFFER
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "C-x C-b") 'ibuffer)
@@ -164,6 +158,7 @@
 * Repos
 #+BEGIN_SRC emacs-lisp
   (require 'package)
+  (setq use-package-always-ensure t)
   ;; Disable package initialize after us.  We either initialize it
   ;; anyway in case of interpreted .emacs, or we don't want slow
   ;; initizlization in case of byte-compiled .emacs.elc.
@@ -178,6 +173,12 @@
   (unless (package-installed-p 'use-package)
     (package-refresh-contents)
     (package-install 'use-package))
+#+END_SRC
+* rg
+#+BEGIN_SRC emacs-lisp
+  (use-package rg
+    :ensure t
+    :config (rg-enable-default-bindings))
 #+END_SRC
 * Key frequent statistics
 #+BEGIN_SRC emacs-lisp
@@ -348,12 +349,13 @@ Org bullets makes things look pretty
   ;;    :config (setq sml/no-confirm-load-theme t)
   ;;    (setq sml/theme 'powerline)
   ;;    (sml/setup))
+  ;;(use-package spacemacs-theme
+  ;;  :ensure t)
   (custom-set-variables '(spacemacs-theme-comment-bg nil)
                         '(spacemacs-theme-custom-colors '((bg1 . "#300a24")
                                                           (comment . "#7fff00"))))
   (load-theme 'spacemacs-dark t)
   (set-background-color "#300a24")
-  (setq )
   (use-package
     spaceline
     :ensure t
@@ -394,6 +396,7 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     (use-package
       counsel
       :ensure t
+      :custom (counsel-find-file-ignore-regexp "^#\\|/#\\|/\\.#\\|\\.(orig|rej)$\\|clangd.*\\(.idx\\)$")
       :config (counsel-mode t)
       (require 'map)
       ;; ivy has a sort function list to provide sort method's to functions.
@@ -429,10 +432,20 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
                               company-candidates)))))
   ;; bind keys
   (dolist (char '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i))
-    (define-key company-mode-map
+    (define-key company-active-map
                 (read-kbd-macro (format "M-%c" char))
                 'company-complete-char))
 #+END_SRC
+* Projectile
+  (use-package
+    projectile
+    :ensure t
+    :config (projectile-global-mode)
+    (setq projectile-completion-system 'ivy))
+ (use-package
+    counsel-projectile
+    :ensure t
+    :config (counsel-projectile-mode))
 * LSP Mode
 #+BEGIN_SRC emacs-lisp
   (defun my-init-lsp()
@@ -443,21 +456,27 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
       :ensure t
       :hook ((c-mode . lsp-deferred)
              (c++-mode . lsp-deferred)
-             ;;(perl-mode . lsp)
+             (json-mode . lsp-deferred)
+             (perl-mode . lsp-deferred)
              ;;(python-mode . lsp)
              (lsp-mode . lsp-enable-which-key-integration))
       :bind (:map lsp-command-map
-             ("f" . lsp-format-buffer)
+             ("F" . projectile-find-file)
+             ("f" . projectile-find-file-dwim)
              ("D" . lsp-find-definition)
              ("R" . lsp-find-references))
       :custom (lsp-keymap-prefix "C-l")
               (lsp-idle-delay 0.5)
+              (lsp-completion-provider :capf)
               (lsp-enable-folding t)
               (lsp-enable-snippet t)
               (lsp-symbol-highlighting-skip-current nil)
               (lsp-semantic-highlighting nil)
               (lsp-server-trace "verbose")
-        :commands lsp)
+              (lsp-clients-clangd-args
+                '("-j=4" "-background-index" "-log=verbose"
+                  "-all-scopes-completion" "-suggest-missing-includes"))
+      :commands lsp lsp-deferred)
     (use-package
       lsp-java
       :ensure t)
@@ -473,11 +492,22 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
              ("r" . lsp-ui-peek-find-references))
       :custom (lsp-ui-sideline-show-code-actions nil)
               (lsp-ui-doc-enable nil)
+              (lsp-ui-peek-always-show t)
+              (lsp-ui-peek-list-width 30)
+              (lsp-ui-peek-peek-height 20)
       :commands lsp-ui-mode)
+
+    (defun lsp-ui-find-workspace-symbol-at-point(symbol)
+      "Find next reference of the symbol at point."
+      (interactive (list (thing-at-point 'symbol)))
+      (xref--find-xrefs symbol 'apropos symbol nil))
+
     (use-package
       lsp-ivy
       :ensure t
-      :commands lsp-ivy-workspace-symbol)
+      :bind (:map lsp-command-map
+             ("S" . lsp-ivy-workspace-symbol)
+             ("s" . lsp-ui-find-workspace-symbol-at-point)))
     (use-package
       lsp-treemacs
       :ensure t
@@ -492,9 +522,10 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 * C++
 ** Basic C/C++ mode initialize
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'auto-mode-alist '("\\.ic\\'" . c-mode))
-  (add-to-list 'auto-mode-alist '("\\.yy\\'" . c-mode))
-  (add-to-list 'auto-mode-alist '("\\.h\\'" . c-mode))
+  (add-to-list 'auto-mode-alist '("\\.ic\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.yy\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+  (add-to-list 'auto-mode-alist '("\\.c\\'" . c++-mode))
   (use-package
     modern-cpp-font-lock
     :ensure t
@@ -532,14 +563,9 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     (interactive)
     (projectile-with-default-dir (projectile-ensure-project (projectile-project-root))
       (async-shell-command
-       "cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DFORCE_INSOURCE_BUILD=1 -DWITH_BOOST=~/work/boost")))
-#+END_SRC
-* Other language modes
-#+BEGIN_SRC emacs-lisp
-(use-package json-mode
-  :ensure t)
-(use-package markdown-mode
-  :ensure t)
+       "CC=clang CXX=clang++ cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        -DFORCE_INSOURCE_BUILD=1 -DWITH_BOOST=~/work/boost; \
+        make GenError; make GenBison_mysql; make GenBison_hints")))
 #+END_SRC
 
 * Avy - navigate by searching for a letter on the screen and jumping to it
@@ -578,24 +604,11 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   #+RESULTS:
 * Misc packages
   #+BEGIN_SRC emacs-lisp
-
-  ; flashes the cursor's line when you scroll
-  (use-package beacon
-  :ensure t
-  :config
-  (beacon-mode 1)
-  (setq beacon-color "#666600")
-  )
-
   ; deletes all the whitespace when you hit backspace or delete
   (use-package hungry-delete
   :ensure t
   :config
   (global-hungry-delete-mode))
-
-
-  (use-package multiple-cursors
-  :ensure t)
 
   ; expand the marked region in semantic increments (negative prefix to reduce region)
   (use-package expand-region
@@ -603,55 +616,10 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   :config
   (global-set-key (kbd "C-=") 'er/expand-region))
 
-(setq save-interprogram-paste-before-kill t)
-
-
 (global-auto-revert-mode 1) ;; you might not want this
 (setq auto-revert-verbose nil) ;; or this
-(global-set-key (kbd "<f5>") 'revert-buffer)
-(global-set-key (kbd "<f6>") 'revert-buffer)
-
-
-
-  #+END_SRC
-
-* Reveal.js
-  #+BEGIN_SRC emacs-lisp :tangle no
-    (use-package ox-reveal
-    :ensure ox-reveal)
-
-    (setq org-reveal-root "http://cdn.jsdelivr.net/reveal.js/3.0.0/")
-    (setq org-reveal-mathjax t)
-
-    (use-package htmlize
-    :ensure t)
-  #+END_SRC
-
-  #+RESULTS:
-  : t
-* Python
-  #+BEGIN_SRC emacs-lisp
-
-        (setq py-python-command "python3")
-        (setq python-shell-interpreter "python3")
-
-
-            (use-package elpy
-            :ensure t
-            :config
-            (elpy-enable))
-
-        (use-package virtualenvwrapper
-          :ensure t
-          :config
-          (venv-initialize-interactive-shells)
-          (venv-initialize-eshell))
-
-  #+END_SRC
-
-  #+RESULTS:
-  : t
-
+(setq save-interprogram-paste-before-kill t)
+#+END_SRC
 * iedit and narrow / widen dwim
   #+BEGIN_SRC emacs-lisp
   ; mark and edit all copies of the marked region simultaniously.
@@ -694,37 +662,6 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   #+RESULTS:
   : narrow-or-widen-dwim
 
-* Web Mode
-#+BEGIN_SRC emacs-lisp
-    (use-package web-mode
-      :ensure t
-      :config
-	   (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-	   (add-to-list 'auto-mode-alist '("\\.vue?\\'" . web-mode))
-	   (setq web-mode-engines-alist
-		 '(("django"    . "\\.html\\'")))
-	   (setq web-mode-ac-sources-alist
-	   '(("css" . (ac-source-css-property))
-	   ("vue" . (ac-source-words-in-buffer ac-source-abbrev))
-           ("html" . (ac-source-words-in-buffer ac-source-abbrev))))
-  (setq web-mode-enable-auto-closing t))
-  (setq web-mode-enable-auto-quoting t) ; this fixes the quote problem I mentioned
-
-
-#+END_SRC
-
-#+RESULTS:
-: t
-* Emmet mode
-#+BEGIN_SRC emacs-lisp
-(use-package emmet-mode
-:ensure t
-:config
-(add-hook 'sgml-mode-hook 'emmet-mode) ;; Auto-start on any markup modes
-(add-hook 'web-mode-hook 'emmet-mode) ;; Auto-start on any markup modes
-(add-hook 'css-mode-hook  'emmet-mode) ;; enable Emmet's css abbreviation.
-)
-#+END_SRC
 * Hydra
 #+BEGIN_SRC emacs-lisp
   (use-package hydra
@@ -801,7 +738,7 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 
 #+RESULTS:
 
-* git
+* Magit
 #+BEGIN_SRC emacs-lisp
 (use-package magit
   :ensure t
@@ -883,17 +820,6 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 (add-hook 'mu4e-compose-mode-hook 'turn-on-auto-fill)
 
 #+END_SRC
-* Better Shell
-#+BEGIN_SRC emacs-lisp :tangle no
-  (use-package better-shell
-      :ensure t
-      :bind (("C-\"" . better-shell-shell)
-             ("C-:" . better-shell-remote-open)))
-#+END_SRC
-
-#+RESULTS:
-: better-shell-remote-open
-
 * eshell stuff
 #+BEGIN_SRC emacs-lisp
 
@@ -1155,118 +1081,44 @@ Eshell prompt
 
 #+RESULTS:
 
+* Smartparens
+#+BEGIN_SRC emacs-lisp
+  (use-package
+    smartparens-config
+    :ensure smartparens
+    :config (smartparens-global-mode t)
+    (show-smartparens-global-mode t)
+    :bind (("C-M-a" . sp-beginning-of-sexp)
+           ("C-M-e" . sp-end-of-sexp)
+           ("C-S-f" . sp-forward-symbol)
+           ("C-S-b" . sp-backward-symbol)
+           ("C-M-t" . sp-transpose-sexp)
+           ("C-M-k" . sp-kill-sexp)
+           ("C-k"   . sp-kill-hybrid-sexp)
+           ("M-k"   . sp-backward-kill-sexp)
+           ("C-M-w" . sp-copy-sexp)
+           ("C-M-d" . delete-sexp)
+           ;; conflict with ansi-term C-<backspace>
+           ;; ("M-<backspace>" . backward-kill-word)
+           ("C-<backspace>" . sp-backward-kill-word)
+           ([remap sp-backward-kill-word] . backward-kill-word)
+           ("M-[" . sp-backward-unwrap-sexp)
+           ("M-]" . sp-unwrap-sexp)
+           ("C-x C-t" . sp-transpose-hybrid-sexp)
+           ("C-c ("  . wrap-with-parens)
+           ("C-c ["  . wrap-with-brackets)
+           ("C-c {"  . wrap-with-braces)
+           ("C-c `"  . wrap-with-back-quotes)))
+#+END_SRC
+
 * Stuff to refile as I do more Screencasts
 #+BEGIN_SRC emacs-lisp
-
-    ;;--------------------------------------------------------------------------
-    ;; latex
-    (use-package tex
+  ;;--------------------------------------------------------------------------
+  ;; latex
+  (use-package
+    tex
     :ensure auctex)
-
-    (defun tex-view ()
-        (interactive)
-        (tex-send-command "evince" (tex-append tex-print-file ".pdf")))
-  ;; babel stuff
-
-;;babel-do-load-languages
-;;-babel-load-languages
-;;ython . t)
-;;macs-lisp . t)
-;; . t)
-;; t)
-;;itaa . t)
-;;ot . t)
-;;rg . t)
-;;  (shell . t )
-;;x . t )
-;;
-  ;; projectile
-    (use-package projectile
-      :ensure t
-      :config
-      (projectile-global-mode)
-    (setq projectile-completion-system 'ivy))
-
-    ;; (use-package counsel-projectile
-    ;;   :ensure t
-    ;;   :config
-    ;;   (counsel-projectile-on)q)
-
-    (use-package smartparens
-    :ensure t
-    :config
-    (use-package smartparens-config)
-    (use-package smartparens-html)
-    (use-package smartparens-python)
-    (use-package smartparens-latex)
-    (smartparens-global-mode t)
-    (show-smartparens-global-mode t)
-    :bind
-    ( ("C-<down>" . sp-down-sexp)
-     ("C-<up>"   . sp-up-sexp)
-     ("M-<down>" . sp-backward-down-sexp)
-     ("M-<up>"   . sp-backward-up-sexp)
-    ("C-M-a" . sp-beginning-of-sexp)
-     ("C-M-e" . sp-end-of-sexp)
-
-
-
-     ("C-M-f" . sp-forward-sexp)
-     ("C-M-b" . sp-backward-sexp)
-
-     ("C-M-n" . sp-next-sexp)
-     ("C-M-p" . sp-previous-sexp)
-
-     ("C-S-f" . sp-forward-symbol)
-     ("C-S-b" . sp-backward-symbol)
-
-     ("C-<right>" . sp-forward-slurp-sexp)
-     ("M-<right>" . sp-forward-barf-sexp)
-     ("C-<left>"  . sp-backward-slurp-sexp)
-     ("M-<left>"  . sp-backward-barf-sexp)
-
-     ("C-M-t" . sp-transpose-sexp)
-     ("C-M-k" . sp-kill-sexp)
-     ("C-k"   . sp-kill-hybrid-sexp)
-     ("M-k"   . sp-backward-kill-sexp)
-     ("C-M-w" . sp-copy-sexp)
-
-     ("C-M-d" . delete-sexp)
-
-     ;; conflict with ansi-term C-<backspace>
-     ;; ("M-<backspace>" . backward-kill-word)
-     ("C-<backspace>" . sp-backward-kill-word)
-     ([remap sp-backward-kill-word] . backward-kill-word)
-
-     ("M-[" . sp-backward-unwrap-sexp)
-     ("M-]" . sp-unwrap-sexp)
-
-     ("C-x C-t" . sp-transpose-hybrid-sexp)
-
-     ("C-c ("  . wrap-with-parens)
-     ("C-c ["  . wrap-with-brackets)
-     ("C-c {"  . wrap-with-braces)
-     ("C-c '"  . wrap-with-single-quotes)
-     ("C-c \"" . wrap-with-double-quotes)
-     ("C-c _"  . wrap-with-underscores)
-    ("C-c `"  . wrap-with-back-quotes)
-    ))
-
-    ;;--------------------------------------------
-
-
-
-
-
-
-    ;; (use-package frame-cmds :ensure t)
-    ;; (load-file "/home/zamansky/Dropbox/shared/zoom-frm.el")
-    ;; (define-key ctl-x-map [(control ?+)] 'zoom-in/out)
-    ;; (define-key ctl-x-map [(control ?-)] 'zoom-in/out)
-    ;; (define-key ctl-x-map [(control ?=)] 'zoom-in/out)
-    (define-key ctl-x-map [(control ?0)] 'zoom-in/out)
-
-
+  ;;--------------------------------------------
 #+END_SRC
 
 * Prodigy
@@ -1456,11 +1308,7 @@ Eshell prompt
 #+BEGIN_SRC emacs-lisp
 (use-package pdf-tools
 :ensure t)
-(use-package org-pdfview
-:ensure t)
-
 (require 'pdf-tools)
-(require 'org-pdfview)
 
 #+END_SRC
 * Misc
