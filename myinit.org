@@ -36,9 +36,9 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Start emacs server if not already running
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (if (and (fboundp 'server-running-p)
-           (not (server-running-p)))
-      (server-start))
+  ;;(if (and (fboundp 'server-running-p)
+  ;;         (not (server-running-p)))
+  ;;    (server-start))
 
   ;; Prevent emacs from creating a bckup file filename
   (setq make-backup-files nil)
@@ -105,7 +105,7 @@
       ad-do-it))
   (ad-activate 'term-sentinel)
 
-  (defvar my-term-shell "/bin/bash")
+  (defvar my-term-shell "bash")
 
   (defadvice ansi-term (before force-bash)
     (interactive (list my-term-shell)))
@@ -124,7 +124,7 @@
 
   (add-hook 'term-mode-hook 'my-term-hook)
   (ansi-term my-term-shell)
-  (ansi-term "/bin/bash")
+  (ansi-term my-term-shell)
 #+END_SRC
 * IBUFFER
 #+BEGIN_SRC emacs-lisp
@@ -450,7 +450,7 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 #+BEGIN_SRC emacs-lisp
   (defun my-init-lsp()
     (setq read-process-output-max (* 1024 1024))
-    (setq flymake-mode -1)
+    (setq flymake-mode nil)
     (use-package
       lsp-mode
       :ensure t
@@ -458,6 +458,7 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
              (c++-mode . lsp-deferred)
              (json-mode . lsp-deferred)
              (perl-mode . lsp-deferred)
+             (cmake-mode . lsp-deferred)
              ;;(python-mode . lsp)
              (lsp-mode . lsp-enable-which-key-integration))
       :bind (:map lsp-command-map
@@ -561,11 +562,11 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 #+BEGIN_SRC emacs-lisp
   (defun mysql_cmake()
     (interactive)
-    (projectile-with-default-dir (projectile-ensure-project (projectile-project-root))
-      (async-shell-command
+    (projectile-run-async-shell-command-in-root
        "CC=clang CXX=clang++ cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        -DFORCE_INSOURCE_BUILD=1 -DWITH_BOOST=~/work/boost; \
-        make GenError; make GenBison_mysql; make GenBison_hints")))
+        -DFORCE_INSOURCE_BUILD=1 -DWITH_EMBEDDED_SERVER=OFF \
+        -DWITH_BOOST=~/work/boost -DWITH_SSL=$OPENSSL_PATH; \
+        make GenError; make GenBison_mysql; make GenBison_hints"))
 #+END_SRC
 
 * Avy - navigate by searching for a letter on the screen and jumping to it
@@ -603,13 +604,13 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 
   #+RESULTS:
 * Misc packages
-  #+BEGIN_SRC emacs-lisp
+ #+BEGIN_SRC emacs-lisp
   ; deletes all the whitespace when you hit backspace or delete
   (use-package hungry-delete
-  :ensure t
-  :config (global-hungry-delete-mode)
-  :init (setq hungry-delete-except-modes
-           '(help-mode minibuffer-mode minibuffer-inactive-mode))
+   :ensure t
+   :config (global-hungry-delete-mode)
+   :init (setq hungry-delete-except-modes
+            '(help-mode minibuffer-mode minibufffer-inactive-mode))
   )
 
   ; expand the marked region in semantic increments (negative prefix to reduce region)
@@ -618,9 +619,9 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   :config
   (global-set-key (kbd "C-=") 'er/expand-region))
 
-(global-auto-revert-mode 1) ;; you might not want this
-(setq auto-revert-verbose nil) ;; or this
-(setq save-interprogram-paste-before-kill t)
+  (global-auto-revert-mode 1) ;; you might not want this
+  (setq auto-revert-verbose nil) ;; or this
+  (setq save-interprogram-paste-before-kill t)
 #+END_SRC
 * iedit and narrow / widen dwim
   #+BEGIN_SRC emacs-lisp
