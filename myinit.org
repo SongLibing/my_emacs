@@ -133,8 +133,18 @@
     (define-key term-raw-map "\C-y" 'my-term-paste))
 
   (add-hook 'term-mode-hook 'my-term-hook)
-  (ansi-term my-term-shell)
-  (ansi-term my-term-shell)
+  ;;(ansi-term my-term-shell)
+  ;;(ansi-term my-term-shell)
+#+END_SRC
+* Vterm
+#+BEGIN_SRC emacs-lisp
+  (use-package xterm-color
+    :ensure t)
+  (use-package vterm
+    :ensure t)
+
+  (vterm "vterm")
+  (vterm "vterm")
 #+END_SRC
 * IBUFFER
 #+BEGIN_SRC emacs-lisp
