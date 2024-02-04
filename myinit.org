@@ -1,4 +1,22 @@
 #+STARTUP: overview
+* Repos
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+  (setq use-package-always-ensure t)
+  ;; Disable package initialize after us.  We either initialize it
+  ;; anyway in case of interpreted .emacs, or we don't want slow
+  ;; initizlization in case of byte-compiled .emacs.elc.
+  (setq package-enable-at-startup nil)
+  ;; Ask package.el to not add (package-initialize) to .emacs.
+  (setq package--init-file-ensured t)
+  (setq package-archives '(("gnu"   . "http://1.15.88.122/gnu/")
+                           ("melpa" . "http://1.15.88.122/melpa/")
+                           ("org" . "http://1.15.88.122/org/")))
+  ;; Bootstrap 'use-package'
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+#+END_SRC
 * Keybindings
 #+BEGIN_SRC emacs-lisp
   (defun set_window_dedicated ()
@@ -10,6 +28,18 @@
     (interactive)
     (forward-line -5))
 
+  (defun my-xref-next-line()
+    (interactive)
+    (switch-to-buffer "*xref*")
+    (xref-next-line-no-show)
+    (xref-goto-xref))
+
+  (defun my-xref-prev-line()
+    (interactive)
+    (switch-to-buffer "*xref*")
+    (xref-prev-line-no-show)
+    (xref-goto-xref))
+
   ;;(global-set-key (kbd "M-n") 'next-lines)
   ;;(global-set-key (kbd "M-p") 'previous-lines)
   (global-set-key (kbd "C-x k") 'kill-this-buffer)
@@ -17,18 +47,22 @@
   (global-set-key (kbd "C-c r") 'clang-format-region)
   (global-set-key (kbd "C-<") 'previous-buffer)
   (global-set-key (kbd "C->") 'next-buffer)
+  (global-set-key (kbd "C-?") 'pop-gloal-mark)
+  (global-set-key (kbd "C-x ,") 'my-xref-next-line)
+  (global-set-key (kbd "C-x .") 'my-xref-prev-line)
+  (global-set-key (kbd "C-.") 'hippie-expand)
   (global-set-key (kbd "C-<") 'pop-gloal-mark)
-#+END_SRC
+  #+END_SRC
 * Init Setting
 #+BEGIN_SRC emacs-lisp
-   (custom-set-variables
-    '(initial-frame-alist (quote ((fullscreen . maximized)))))
+  (custom-set-variables
+   '(initial-frame-alist (quote ((fullscreen . maximized)))))
 
   ;;;;;;;;;
   ;; By default Emacs triggers garbage collection at ~0.8MB which makes
   ;; startup really slow. Since most systems have at least 64MB of memory,
   ;; we increase it during initialization.
-  (setq gc-cons-threshold 64000000)
+  (setq gc-cons-threshold 256000000)
   ;; restore after startup
   ;;(add-hook 'after-init-hook #'(lambda ()
   ;;                               (setq gc-cons-threshold 800000)))
@@ -68,19 +102,26 @@
   (setq tab-width 2)
   ;; Show <tab> as two spaces
   (standard-display-ascii ?\t "  ")
+
+  ;; Show ediff windows horizontally
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+  (setq ediff-split-window-function 'split-window-horizontally)
+  (setq ediff-diff-options "-w")
+
   (winner-mode t)
   (desktop-save-mode t)
 
   (defun set-exec-path-from-shell-PATH ()
-   "Set up Emacs' `exec-path' and PATH environment variable to match that used
-    by the user's shell. This is particularly useful under Mac OSX, where GUI
-    apps are not started from a shell."
-   (interactive)
+    "Set up Emacs' `exec-path' and PATH environment variable to match that used
+      by the user's shell. This is particularly useful under Mac OSX, where GUI
+      apps are not started from a shell."
+    (interactive)
     (let ((path-from-shell (replace-regexp-in-string "[ \t\n]*$" "" (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))))
       (setenv "PATH" path-from-shell)
       (setq exec-path (split-string path-from-shell path-separator))))
   (set-exec-path-from-shell-PATH)
+  (setq split-height-threshold nil)
+  (setq split-width-threshold 140)
 #+END_SRC
 * Interface tweaks
 #+BEGIN_SRC emacs-lisp
@@ -95,15 +136,57 @@
   (setq ring-bell-function 'ignore)
   (setq require-final-newline t)
 
+  ;; Theme
+  (use-package
+    smart-mode-line-powerline-theme
+    :ensure t
+    :config (setq sml/no-confirm-load-theme t)
+    (setq sml/theme 'powerline)
+    (sml/setup))
+  (use-package spacemacs-theme
+    :ensure t)
+  (custom-set-variables '(spacemacs-theme-comment-bg nil)
+                        '(spacemacs-theme-custom-colors '((bg1 . "#442538")
+                                                          (comment . "#7fff00"))))
+  (load-theme 'spacemacs-dark t)
+  ;;(set-background-color "#300a24")
+  (set-background-color "#442538")
+  (use-package
+    spaceline
+    :ensure t
+    :config (setq powerline-default-separator 'slant)
+    (spaceline-emacs-theme))
+
   ;; Highlights the current cursor line
   (global-hl-line-mode t)
   (set-cursor-color "yellow")
-  (set-face-background hl-line-face "yellow4")
+  (setq default-cursor-type 'hbar)
+  (set-face-background hl-line-face "darkred")
+  ;;(set-face-background hl-line-face "yellow4")
   ;;(set-face-background 'hl-line "#372E2D")
-
   ;; highlights trailing spaces tabs and lines exceeding 80 columns
   (setq whitespace-style '(face trailing tabs lines-tail))
-  (global-whitespace-mode t)
+  (define-global-minor-mode my-global-whitespace-mode whitespace-mode
+    (lambda ()
+      (unless (derived-mode-p 'vterm-mode 'term-mode)
+        (whitespace-mode t)))
+    )
+  (my-global-whitespace-mode t)
+
+  ;; font scaling
+  (defun scale-increase()
+    (interactive)
+    (default-text-scale-increase)
+    (spaceline-emacs-theme))
+  (defun scale-decrease()
+    (interactive)
+    (default-text-scale-decrease)
+    (spaceline-emacs-theme))
+  (use-package
+    default-text-scale
+    :ensure t
+    :config (global-set-key (kbd "C-M-=") 'scale-increase)
+    (global-set-key (kbd "C-M--") 'scale-decrease))
 #+END_SRC
 * Ansi-term
 #+BEGIN_SRC emacs-lisp
@@ -175,31 +258,17 @@
   ;; Don't ask for confirmation to delete marked buffers
   (setq ibuffer-expert t)
 #+END_SRC
-* Repos
-#+BEGIN_SRC emacs-lisp
-  (require 'package)
-  (setq use-package-always-ensure t)
-  ;; Disable package initialize after us.  We either initialize it
-  ;; anyway in case of interpreted .emacs, or we don't want slow
-  ;; initizlization in case of byte-compiled .emacs.elc.
-  (setq package-enable-at-startup nil)
-  ;; Ask package.el to not add (package-initialize) to .emacs.
-  (setq package--init-file-ensured t)
-  (setq package-archives '(("gnu"   . "http://elpa.emacs-china.org/gnu/")
-                           ("melpa" . "http://elpa.emacs-china.org/melpa/")
-                           ("org" . "http://elpa.emacs-china.org/org/")))
-
-  ;; Bootstrap 'use-package'
-  (unless (package-installed-p 'use-package)
-    (package-refresh-contents)
-    (package-install 'use-package))
-#+END_SRC
 * rg
 #+BEGIN_SRC emacs-lisp
   (use-package rg
     :ensure t
     :config (rg-enable-default-bindings))
 #+END_SRC
+
+* irc
+(setq rcirc-default-nick "Libing")
+(setq rcirc-default-full-name "Libing Song")
+
 * Key frequent statistics
 #+BEGIN_SRC emacs-lisp
   (use-package keyfreq
@@ -361,42 +430,6 @@ Org bullets makes things look pretty
 
   #+RESULTS:
 
-* Themes and modeline
-#+BEGIN_SRC emacs-lisp
-  ;;  (use-package
-  ;;    smart-mode-line-powerline-theme
-  ;;    :ensure t
-  ;;    :config (setq sml/no-confirm-load-theme t)
-  ;;    (setq sml/theme 'powerline)
-  ;;    (sml/setup))
-  ;;(use-package spacemacs-theme
-  ;;  :ensure t)
-  (custom-set-variables '(spacemacs-theme-comment-bg nil)
-                        '(spacemacs-theme-custom-colors '((bg1 . "#300a24")
-                                                          (comment . "#7fff00"))))
-  (load-theme 'spacemacs-dark t)
-  (set-background-color "#300a24")
-  (use-package
-    spaceline
-    :ensure t
-    :config (setq powerline-default-separator 'slant)
-            (spaceline-emacs-theme))
-
-  ;; font scaling
-  (defun scale-increase()
-    (interactive)
-    (default-text-scale-increase)
-    (spaceline-emacs-theme))
-  (defun scale-decrease()
-    (interactive)
-    (default-text-scale-decrease)
-    (spaceline-emacs-theme))
-  (use-package
-    default-text-scale
-    :ensure t
-    :config (global-set-key (kbd "C-M-=") 'scale-increase)
-            (global-set-key (kbd "C-M--") 'scale-decrease))
-#+END_SRC
 * Swiper / Ivy / Counsel
 Swiper gives us a really efficient incremental search with regular expressions
 and Ivy / Counsel replace a lot of ido or helms completion functionality
@@ -466,83 +499,10 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     counsel-projectile
     :ensure t
     :config (counsel-projectile-mode))
-* LSP Mode
-#+BEGIN_SRC emacs-lisp
-  (defun my-init-lsp()
-    (setq read-process-output-max (* 1024 1024))
-    (setq flymake-mode nil)
-    (use-package
-      lsp-mode
-      :ensure t
-      :hook ((c-mode . lsp-deferred)
-             (c++-mode . lsp-deferred)
-             (json-mode . lsp-deferred)
-             (perl-mode . lsp-deferred)
-             (cmake-mode . lsp-deferred)
-             ;;(python-mode . lsp)
-             (lsp-mode . lsp-enable-which-key-integration))
-      :bind (:map lsp-command-map
-             ("F" . projectile-find-file)
-             ("f" . projectile-find-file-dwim)
-             ("D" . lsp-find-definition)
-             ("R" . lsp-find-references))
-      :custom (lsp-keymap-prefix "C-l")
-              (lsp-idle-delay 0.5)
-              (lsp-completion-provider :capf)
-              (lsp-enable-folding t)
-              (lsp-enable-snippet t)
-              (lsp-symbol-highlighting-skip-current nil)
-              (lsp-semantic-highlighting nil)
-              (lsp-server-trace "verbose")
-              (lsp-clients-clangd-args
-                '("-j=4" "-background-index" "-log=verbose"
-                  "-all-scopes-completion" "-suggest-missing-includes"))
-      :commands lsp lsp-deferred)
-    (use-package
-      lsp-java
-      :ensure t)
-    (use-package
-      lsp-ui
-      :ensure t
-      :bind (:map lsp-command-map
-             ("m" . lsp-ui-imenu)
-             ("i" . lsp-ui-doc-glance)
-             ("p" . lsp-ui-find-prev-reference)
-             ("n" . lsp-ui-find-next-reference)
-             ("d" . lsp-ui-peek-find-definitions)
-             ("r" . lsp-ui-peek-find-references))
-      :custom (lsp-ui-sideline-show-code-actions nil)
-              (lsp-ui-doc-enable nil)
-              (lsp-ui-peek-always-show t)
-              (lsp-ui-peek-list-width 30)
-              (lsp-ui-peek-peek-height 20)
-      :commands lsp-ui-mode)
-
-    (defun lsp-ui-find-workspace-symbol-at-point(symbol)
-      "Find next reference of the symbol at point."
-      (interactive (list (thing-at-point 'symbol)))
-      (xref--find-xrefs symbol 'apropos symbol nil))
-
-    (use-package
-      lsp-ivy
-      :ensure t
-      :bind (:map lsp-command-map
-             ("S" . lsp-ivy-workspace-symbol)
-             ("s" . lsp-ui-find-workspace-symbol-at-point)))
-    (use-package
-      lsp-treemacs
-      :ensure t
-      :commands lsp-treemacs-errors-list)
-    (use-package
-      dap-mode
-      :ensure t)
-    (custom-set-variables '(lsp-ui-doc-enable nil)))
-
-  (my-init-lsp)
-#+END_SRC
 * C++
 ** Basic C/C++ mode initialize
 #+BEGIN_SRC emacs-lisp
+  (add-to-list 'auto-mode-alist '("\\.inl\\'" . c++-mode))
   (add-to-list 'auto-mode-alist '("\\.ic\\'" . c++-mode))
   (add-to-list 'auto-mode-alist '("\\.yy\\'" . c++-mode))
   (add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
@@ -582,13 +542,93 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 #+BEGIN_SRC emacs-lisp
   (defun mysql_cmake()
     (interactive)
-    (projectile-run-async-shell-command-in-root
-       "CC=clang CXX=clang++ cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        -DFORCE_INSOURCE_BUILD=1 -DWITH_EMBEDDED_SERVER=OFF \
-        -DWITH_BOOST=~/work/boost -DWITH_SSL=$OPENSSL_PATH; \
-        make GenError; make GenBison_mysql; make GenBison_hints"))
+    (projectile-run-async-shell-command-in-root "~/.bin/mysql_cmake.sh"))
 #+END_SRC
 
+* LSP Mode
+#+BEGIN_SRC emacs-lisp
+  (defun my-init-lsp()
+    (setq read-process-output-max (* 2048 1024))
+    (setenv "LSP_USE_PLISTS" "true")
+    (setq lsp-use-plists 1)
+    (setq flymake-mode nil)
+
+    (use-package
+      lsp-mode
+      :ensure t
+      :hook ((c-mode . lsp-defferred)
+             (c++-mode . lsp-deferred)
+             (json-mode . lsp-deferred)
+             (perl-mode . lsp-deferred)
+             (cmake-mode . lsp-deferred)
+             (python-mode . lsp-deferred)
+             (lsp-mode . lsp-enable-which-key-integration))
+      :bind (:map lsp-command-map
+                  ("F" . projectile-find-file)
+                  ("f" . projectile-find-file-dwim)
+                  ("D" . lsp-find-definition)
+                  ("R" . lsp-find-references))
+      :custom
+      (lsp-keymap-prefix "C-l")
+      (lsp-use-plists 1)
+      (lsp-idle-delay 0.1)
+      (lsp-completion-provider :capf)
+      (lsp-enable-folding t)
+      (lsp-enable-snippet t)
+      (lsp-symbol-highlighting-skip-current nil)
+      (lsp-semantic-highlighting nil)
+      (lsp-server-trace "verbose")
+      (lsp-clients-clangd-args
+       '("-j=4" "-background-index" "-log=verbose"
+         "-all-scopes-completion" "-suggest-missing-includes"))
+      :commands lsp lsp-deferred)
+
+    (use-package
+      lsp-ui
+      :ensure t
+      :bind (:map lsp-command-map
+                  ("m" . lsp-ui-imenu)
+                  ("i" . lsp-ui-doc-glance)
+                  ("p" . lsp-ui-find-prev-reference)
+                  ("n" . lsp-ui-find-next-reference)
+                  ("d" . lsp-ui-peek-find-definitions)
+                  ("r" . lsp-ui-peek-find-references))
+      :custom
+      (lsp-ui-sideline-show-code-actions nil)
+      (lsp-ui-doc-enable nil)
+      (lsp-ui-peek-always-show t)
+      (lsp-ui-peek-list-width 30)
+      (lsp-ui-peek-peek-height 40)
+      :commands lsp-ui-mode)
+
+    (defun lsp-ui-find-workspace-symbol-at-point(symbol)
+      "Find next reference of the symbol at point."
+      (interactive (list (thing-at-point 'symbol)))
+      (xref--find-xrefs symbol 'apropos symbol nil))
+
+    (use-package
+      lsp-ivy
+      :ensure t
+      :bind (:map lsp-command-map
+                  ("S" . lsp-ivy-workspace-symbol)
+                  ("s" . lsp-ui-find-workspace-symbol-at-point)))
+    (use-package
+      lsp-treemacs
+      :ensure t
+      :commands lsp-treemacs-errors-list)
+    (use-package
+      dap-mode
+      :ensure t)
+    (custom-set-variables '(lsp-ui-doc-enable nil)))
+
+  (my-init-lsp)
+#+END_SRC
+* Tree-Sitter
+#+BEGIN_SRC emacs-lisp
+  (use-package treesit-auto
+    :config
+    (global-treesit-auto-mode))
+#+END_SRC
 * Avy - navigate by searching for a letter on the screen and jumping to it
   See https://github.com/abo-abo/avy for more info
   #+BEGIN_SRC emacs-lisp
@@ -782,8 +822,8 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   (magit-diff-range "master"))
 
 (global-set-key (kbd "M-g g") 'hydra-git-gutter/body)
-(global-set-key (kbd "M-g b") 'magit-blame)
-(global-set-key (kbd "M-g a") 'magit-blame-mode)
+(global-set-key (kbd "M-g b") 'magit-blame-addition)
+(global-set-key (kbd "M-g a") 'magit-blame-quit)
 (global-set-key (kbd "M-g s") 'magit-show-commit)
 (global-set-key (kbd "M-g d") 'magit-diff-master)
 
