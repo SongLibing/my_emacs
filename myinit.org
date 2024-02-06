@@ -1,4 +1,7 @@
 #+STARTUP: overview
+#+begin_src emacs-lisp :comments no :tangle yes
+  ;; -*- lexical-binding: t -*-
+#+end_src
 * Repos
 #+BEGIN_SRC emacs-lisp
   (require 'package)
@@ -123,6 +126,7 @@
   (setq split-height-threshold nil)
   (setq split-width-threshold 140)
   (custom-set-variables '(window-min-width 80))
+  (custom-set-variables '(window-min-high 80))
 #+END_SRC
 * Interface tweaks
 #+BEGIN_SRC emacs-lisp
@@ -433,75 +437,181 @@ Org bullets makes things look pretty
 
   #+RESULTS:
 
-* Swiper / Ivy / Counsel
-Swiper gives us a really efficient incremental search with regular expressions
-and Ivy / Counsel replace a lot of ido or helms completion functionality
+* Vertico Consult marginalia corfu
 #+BEGIN_SRC emacs-lisp
+  (recentf-mode t)
   (use-package
-    ivy
+    vertico
+    :custom
+    (vertico-count 10)
+    (vertico-resize t)
+    (vertico-cycle t)
+    :init
+    (vertico-mode)
+    :bind
+    (:map vertico-map
+          ("M-q" . vertico-quick-jump)
+          ("C-q" . vertico-quick-exit))
+    (:map minibuffer-local-map
+          ("C-s" . next-line)
+          ("C-r" . previous-line)
+          ("C-o" . embark-export)))
+
+  (use-package
+    orderless
+    :init
+    (setq completion-styles '(orderless basic)
+          completion-category-defaults nil
+          completion-category-overrides '((file (styles partial-completion)))))
+
+  ;; Do not allow the cursor in the minibuffer prompt
+  (setq minibuffer-prompt-properties
+        '(read-only t cursor-intangible t face minibuffer-prompt))
+  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+  (defun my-vertico-posframe-frame-center (info)
+    (cons (/ (- (plist-get info :parent-frame-width)
+                (plist-get info :posframe-width))
+             2)
+          (/ (- (plist-get info :parent-frame-height)
+                (* (line-pixel-height) (+ 1 vertico-count)))
+             2)))
+
+  (defun my-vertico-posframe-poshandler (info)
+    (my-vertico-posframe-frame-center info))
+
+  (use-package
+    vertico-posframe
+    :after vertico
+    :custom
+    (vertico-posframe-width 120)
+    (vertico-posframe-parameters
+     '((left-fringe . 4)
+       (right-fringe . 4)))
+    (vertico-posframe-poshandler #'my-vertico-posframe-poshandler)
+    :init (vertico-posframe-mode t))
+
+  ;; posframe auto resize
+  (cl-defmethod vertico--resize-window (height &context (vertico-posframe-mode (eql t)))
+    (unless (not vertico-resize) (setq vertico-posframe-height (+ 1 height))))
+
+  (use-package savehist
+    :init
+    (savehist-mode))
+
+  (use-package
+    marginalia
+    :init
+    (marginalia-mode))
+
+  ;; margialia align support shrink
+  (advice-add 'marginalia--align
+              :before
+              (lambda (&rest r) (setq marginalia--cand-width-max 0)))
+
+  (use-package consult
+    :bind
+    (("C-s" . consult-line) ;; replace isearch-forward
+     ("C-r" . consult-line) ;; replace isearch-backward
+     ("C-x b" . consult-buffer)                ;; orig. switch-to-buffer
+     ("C-x 4 b" . consult-buffer-other-window) ;; orig. switch-to-buffer-other-window
+     ("C-x 5 b" . consult-buffer-other-frame)  ;; orig. switch-to-buffer-other-frame
+     ("C-x r b" . consult-bookmark)            ;; orig. bookmark-jump
+     ("C-x p b" . consult-project-buffer)      ;; orig. project-switch-to-buffer
+     ("C-c o" . consult-outline)               ;; Alternative: consult-org-heading
+     ("C-c m" . consult-mark)
+     ("C-c n" . consult-mark))
+    :hook (completion-list-mode . consult-preview-at-point-mode))
+
+  (use-package
+    embark
+    :init
+    (setq prefix-help-command #'embark-prefix-help-command)
+    :config
+    ;;(add-hook 'eldoc-documentation-functions #'embark-eldoc-first-target)
+    ;;(setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly)
+    ;; Hide the mode line of the Embark live/completions buffers
+    (add-to-list 'display-buffer-alist
+                 '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                   nil
+                   (window-parameters (mode-line-format . none)))))
+  (use-package embark-consult
+    ;; only need to install it, embark loads it after consult if found
     :ensure t
-    :config (setq ivy-use-virtual-buffers t)
-    (setq ivy-count-format "%d/%d ")
-    (setq ivy-display-style 'fancy)
-    (ivy-mode t)
-    (use-package
-      swiper
-      :ensure t
-      :bind (("C-s" . swiper)
-             ("C-r" . swiper)))
-    (use-package
-      counsel
-      :ensure t
-      :custom (counsel-find-file-ignore-regexp "^#\\|/#\\|/\\.#\\|\\.(orig|rej)$\\|clangd.*\\(.idx\\)$")
-      :config (counsel-mode t)
-      (require 'map)
-      ;; ivy has a sort function list to provide sort method's to functions.
-      (map-put ivy-sort-functions-alist #'counsel-M-x #'string-lessp)))
+    :hook
+    (embark-collect-mode . consult-preview-at-point-mode))
+
+  (use-package
+    corfu
+    :custom
+    (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+    (corfu-auto t)                 ;; Enable auto completion
+    (corfu-separator ?\s)          ;; Orderless field separator
+    (corfu-quit-at-boundary t)   ;; Never quit at completion boundary
+    (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+    (corfu-preview-current nil)    ;; Disable current candidate preview
+    (corfu-preselect 'first)      ;; Preselect the prompt
+    (corfu-on-exact-match nil)     ;; Configure handling of exact matches
+    (corfu-scroll-margin 10)        ;; Use scroll margin
+    (corfu-preview-current t)
+    (corfu-indexed-mode)
+    (corfu-bar-width 0)
+    (corfu--preview-ov t)
+    (corfu--frame)
+    :bind (:map corfu-map
+                ("C-q" . corfu-quick-insert))
+    :init
+    (global-corfu-mode))
 #+END_SRC
 * Company
 #+BEGIN_SRC emacs-lisp
-  (defun convert-to-char(numbered)
-     (format " %c %d" (aref "fjdkslaghi" (- numbered 1)) numbered))
-
-  (use-package
-    company
-    :ensure t
-    :config (setq company-idle-delay 0)
-    (setq company-minimum-prefix-length 3)
-    (setq company-show-numbers t)
-    (setq company-show-numbers-function #'convert-to-char)
-    (global-company-mode t))
-
-  (defun company-complete-char(char)
-    ;; list is for set "char" argument
-    (interactive
-      (list (let* ((type (event-basic-type last-command-event)))
-                  (if (characterp type) type ?\;))))
-
-    (let* ((char-list (subseq '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i) 0
-                              (min 10 (- company-candidates-length
-                                         company-tooltip-offset))))
-           (n (cl-position char char-list)))
-      (when (and (company-manual-begin)
-                 (cl-find char char-list))
-            (company-finish (nth (+ n company-tooltip-offset)
-                              company-candidates)))))
-  ;; bind keys
-  (dolist (char '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i))
-    (define-key company-active-map
-                (read-kbd-macro (format "M-%c" char))
-                'company-complete-char))
+;;  (defun convert-to-char(numbered)
+;;     (format " %c %d" (aref "fjdkslaghi" (- numbered 1)) numbered))
+;;
+;;  (use-package
+;;    company
+;;    :ensure t
+;;    :config (setq company-idle-delay 0)
+;;    (setq company-minimum-prefix-length 3)
+;;    (setq company-show-numbers t)
+;;    (setq company-show-numbers-function #'convert-to-char)
+;;    (global-company-mode t))
+;;
+;;  (defun company-complete-char(char)
+;;    ;; list is for set "char" argument
+;;    (interactive
+;;      (list (let* ((type (event-basic-type last-command-event)))
+;;                  (if (characterp type) type ?\;))))
+;;
+;;    (let* ((char-list (subseq '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i) 0
+;;                              (min 10 (- company-candidates-length
+;;                                         company-tooltip-offset))))
+;;           (n (cl-position char char-list)))
+;;      (when (and (company-manual-begin)
+;;                 (cl-find char char-list))
+;;            (company-finish (nth (+ n company-tooltip-offset)
+;;                              company-candidates)))))
+;;  ;; bind keys
+;;  (dolist (char '(?f ?j ?d ?k ?s ?l ?a ?g ?h ?i))
+;;    (define-key company-active-map
+;;                (read-kbd-macro (format "M-%c" char))
+;;                'company-complete-char))
 #+END_SRC
 * Projectile
+#+BEGIN_SRC emacs-lisp
   (use-package
     projectile
     :ensure t
-    :config (projectile-global-mode)
-    (setq projectile-completion-system 'ivy))
- (use-package
-    counsel-projectile
-    :ensure t
-    :config (counsel-projectile-mode))
+    :config (projectile-global-mode))
+#+END_SRC
+* Tree-Sitter
+#+BEGIN_SRC emacs-lisp
+  (use-package treesit-auto
+    :init
+    (progn (setq treesit-font-lock-level 4))
+    :config
+    (global-treesit-auto-mode))
+#+END_SRC
 * C++
 ** Basic C/C++ mode initialize
 #+BEGIN_SRC emacs-lisp
@@ -595,26 +705,18 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
                   ("p" . lsp-ui-find-prev-reference)
                   ("n" . lsp-ui-find-next-reference)
                   ("d" . lsp-ui-peek-find-definitions)
-                  ("r" . lsp-ui-peek-find-references))
+                  ("r" . lsp-ui-peek-find-references)
+                  ("s" . lsp-ui-find-workspace-symbol-at-point))
       :custom
       (lsp-ui-sideline-show-code-actions nil)
       (lsp-ui-doc-enable nil)
       (lsp-ui-peek-always-show t)
       (lsp-ui-peek-list-width 30)
       (lsp-ui-peek-peek-height 40)
-      :commands lsp-ui-mode)
-
-    (defun lsp-ui-find-workspace-symbol-at-point(symbol)
-      "Find next reference of the symbol at point."
-      (interactive (list (thing-at-point 'symbol)))
-      (xref--find-xrefs symbol 'apropos symbol nil))
+      :commands lsp-ui-mdode)
 
     (use-package
-      lsp-ivy
-      :ensure t
-      :bind (:map lsp-command-map
-                  ("S" . lsp-ivy-workspace-symbol)
-                  ("s" . lsp-ui-find-workspace-symbol-at-point)))
+      consult-lsp)
     (use-package
       lsp-treemacs
       :ensure t
@@ -625,12 +727,6 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     (custom-set-variables '(lsp-ui-doc-enable nil)))
 
   (my-init-lsp)
-#+END_SRC
-* Tree-Sitter
-#+BEGIN_SRC emacs-lisp
-  (use-package treesit-auto
-    :config
-    (global-treesit-auto-mode))
 #+END_SRC
 * Avy - navigate by searching for a letter on the screen and jumping to it
   See https://github.com/abo-abo/avy for more info
@@ -813,7 +909,6 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
   (bind-key "C-x g" 'magit-status)
   ))
 ;; ?? What is its purpose
-(setq magit-completing-read-function 'ivy-completing-read)
 
 (use-package git-gutter
   :ensure t
@@ -1130,7 +1225,6 @@ Eshell prompt
          ("M-g x" . dumb-jump-go-prefer-external)
          ("M-g z" . dumb-jump-go-prefer-external-other-window))
   :config
-  ;; (setq dumb-jump-selector 'ivy) ;; (setq dumb-jump-selector 'helm)
 :init
 (dumb-jump-mode)
   :ensure
@@ -1372,10 +1466,10 @@ Eshell prompt
 #+END_SRC
 * PDF tools
 #+BEGIN_SRC emacs-lisp
-(use-package pdf-tools
-:ensure t)
-(require 'pdf-tools)
-
+  (use-package pdf-tools
+  :ensure t)
+  (setq pdf-view-use-scaling t
+        pdf-view-use-imagemagick nil)
 #+END_SRC
 * Misc
 #+BEGIN_SRC emacs-lisp
