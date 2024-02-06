@@ -122,6 +122,7 @@
   (set-exec-path-from-shell-PATH)
   (setq split-height-threshold nil)
   (setq split-width-threshold 140)
+  (custom-set-variables '(window-min-width 80))
 #+END_SRC
 * Interface tweaks
 #+BEGIN_SRC emacs-lisp
@@ -136,6 +137,8 @@
   (setq ring-bell-function 'ignore)
   (setq require-final-newline t)
 
+  (add-to-list 'default-frame-alist
+               '(font . "JetBrains Mono-15"))
   ;; Theme
   (use-package
     smart-mode-line-powerline-theme
