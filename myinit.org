@@ -222,6 +222,12 @@
   ;;(ansi-term my-term-shell)
   ;;(ansi-term my-term-shell)
 #+END_SRC
+* Readonly Mode
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'prog-mode-hook 'read-only-mode)
+  (add-hook 'text-mode-hook 'read-only-mode)
+  (global-set-key (kbd "<escape>") 'read-only-mode)
+#+END_SRC
 * Vterm
 #+BEGIN_SRC emacs-lisp
   (use-package xterm-color
