@@ -559,12 +559,7 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
     (use-package
       lsp-mode
       :ensure t
-      :hook ((c-mode . lsp-defferred)
-             (c++-mode . lsp-deferred)
-             (json-mode . lsp-deferred)
-             (perl-mode . lsp-deferred)
-             (cmake-mode . lsp-deferred)
-             (python-mode . lsp-deferred)
+      :hook ((prog-mode . lsp-deferred)
              (lsp-mode . lsp-enable-which-key-integration))
       :bind (:map lsp-command-map
                   ("F" . projectile-find-file)
@@ -629,7 +624,10 @@ and Ivy / Counsel replace a lot of ido or helms completion functionality
 * Tree-Sitter
 #+BEGIN_SRC emacs-lisp
   (use-package treesit-auto
+    :custom
+    (treesit-auto-install 'prompt)
     :config
+    (treesit-auto-add-to-auto-mode-alist)
     (global-treesit-auto-mode))
 #+END_SRC
 * Avy - navigate by searching for a letter on the screen and jumping to it
